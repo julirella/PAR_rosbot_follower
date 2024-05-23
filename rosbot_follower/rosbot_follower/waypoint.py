@@ -8,7 +8,7 @@ from action_msgs.msg import GoalStatus
 import rclpy
 from rclpy.action import ActionClient
 from rclpy.node import Node
-from std_msgs.msg import Bool
+from geometry_msgs.msg import PoseStamped
 
 
 class NavToPoseActionClient(Node):
@@ -22,25 +22,25 @@ class NavToPoseActionClient(Node):
         self.get_logger().info('Starting')
         
         self.sub_be = self.create_subscription(
-                            Bool,
-                            '/go_home',
+                            PoseStamped,
+                            '/follow/pose',
                             self.goal_listener,
                             10
                     )
 
-    def goal_listener(self, data):
-        if data:
+    def goal_listener(self, sentPose):
+        if sentPose:
             self.get_logger().info(f"Start goal")
-            self.send_goal()
+            self.send_goal(sentPose)
 
-    def send_goal(self):
+    def send_goal(self, sentPose):
         self.get_logger().info('Sending Goal')
         
         goal_pose = NavigateToPose.Goal()
         goal_pose.pose.header.frame_id = 'map'
-        goal_pose.pose.pose.position.x = 0.0
-        goal_pose.pose.pose.position.y = 0.0
-        goal_pose.pose.pose.position.z = 0.0
+        goal_pose.pose.pose.position.x = sentPose.pose.position.x
+        goal_pose.pose.pose.position.y = sentPose.pose.position.y
+        goal_pose.pose.pose.position.z = sentPose.pose.position.z
         
         goal_pose.pose.pose.orientation.x = 1.0
         goal_pose.pose.pose.orientation.y = 0.0
