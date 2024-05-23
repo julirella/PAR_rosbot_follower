@@ -39,6 +39,11 @@ class Tracker(Node):
 
         self.laser_scan = LaserScan()
 
+         # Transform listener
+        self.tf_buffer = tf2_ros.buffer.Buffer()
+        self.tf_listener = tf2_ros.transform_listener.TransformListener(self.tf_buffer, self)
+
+
 
     def dst_points(self, detected_object_lst):
         object_width = detected_object_lst[1]
@@ -68,6 +73,7 @@ class Tracker(Node):
     
     def angle_from_image_index(self, x_index):
         #centre offset should be positive if image pixel is to the left of image cenre
+        self.get_logger().info(f"x_index: {x_index}")
         centre_offset = IMAGE_WIDTH / 2 - x_index
         degrees_per_pixel = CAMERA_FIELD_OF_VIEW / IMAGE_WIDTH
         angle = centre_offset * degrees_per_pixel
@@ -80,6 +86,8 @@ class Tracker(Node):
     def get_distance_from_laser_scan(self, ranges, centre_x):
         angle = int(self.angle_from_image_index(centre_x))
         index = angle*2
+        self.get_logger().info(f"index: {index}, ranges len: {len(ranges)}")
+        
         distance = ranges[index]
 
         #if the laser cuts out for the required angle, just look to the side a little bit
@@ -119,7 +127,7 @@ class Tracker(Node):
 
         return self.generate_origin_pose()
     
-    def calculate_pose_form_object(self, object_msg_data):
+    def calculate_pose_from_object(self, object_msg_data):
 
         dst_pts = self.dst_points(object_msg_data) 
 
@@ -167,4 +175,13 @@ class Tracker(Node):
             
 
 def main(args=None):
+    rclpy.init(args=args)
+    tracker = Tracker()
     executor = MultiThreadedExecutor(num_threads=2)
+    executor.add_node(tracker)
+
+    try:
+        executor.spin()
+    finally:
+        tracker.destroy_node()
+        rclpy.shutdown()

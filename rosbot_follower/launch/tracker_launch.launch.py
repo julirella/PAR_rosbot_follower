@@ -95,3 +95,5 @@ def generate_launch_description():
         output='screen',
     )
     ld.add_action(node)
+
+    return ld
