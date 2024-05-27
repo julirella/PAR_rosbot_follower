@@ -11,7 +11,9 @@ from std_msgs.msg import Float32MultiArray
 from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import PoseStamped, Pose
 import tf2_geometry_msgs
+
 import tf2_ros
+from turtle_tf2_py.turtle_tf2_broadcaster import quaternion_from_euler
 
 import numpy as np
 import cv2
@@ -42,6 +44,9 @@ class Tracker(Node):
          # Transform listener
         self.tf_buffer = tf2_ros.buffer.Buffer()
         self.tf_listener = tf2_ros.transform_listener.TransformListener(self.tf_buffer, self)
+
+        #flags
+        self.whole_target_pos = False
 
 
 
@@ -135,28 +140,40 @@ class Tracker(Node):
         centre_x, _ = self.get_centre_index(dst_pts)
         angle = self.angle_from_image_index_rad(centre_x)
         
-        laser_image = self.laser_scan
+        if self.whole_target_pos:
+            laser_image = self.laser_scan
 
-        object_distance = self.get_distance_from_laser_scan(laser_image.ranges, centre_x)
-        
-        #from now on laser frame coordinates, continuing as if laser frame and rgb camera frame were the same
-        laser_frame_x = object_distance * np.cos(angle)
-        laser_frame_y = object_distance * np.sin(angle)
+            object_distance = self.get_distance_from_laser_scan(laser_image.ranges, centre_x)
+            
+            #from now on laser frame coordinates, continuing as if laser frame and rgb camera frame were the same
+            laser_frame_x = object_distance * np.cos(angle)
+            laser_frame_y = object_distance * np.sin(angle)
 
-        laser_pose = self.generate_origin_pose()
+            laser_pose = self.generate_origin_pose()
 
-        # - because laser is the other way round from everything else
-        laser_pose.position.x = - laser_frame_x
-        laser_pose.position.y = - laser_frame_y
+            # - because laser is the other way round from everything else
+            laser_pose.position.x = - laser_frame_x
+            laser_pose.position.y = - laser_frame_y
 
-        # self.get_logger().info(f"cam frame pose: x: {laser_frame_x}, y: {laser_frame_y}")
+            # self.get_logger().info(f"cam frame pose: x: {laser_frame_x}, y: {laser_frame_y}")
 
-        stamp = Time.from_msg(laser_image.header.stamp)
-        pose = self.transform_pose('laser', 'map', laser_pose, stamp)
+            stamp = laser_image.header.stamp
+            pose = self.transform_pose('laser', 'map', laser_pose, Time.from_msg(stamp))
+        else:
+            rotated_pose = self.generate_origin_pose()
+            orientation = quaternion_from_euler(0, 0, angle) #angle is around z axis so yaw
+            rotated_pose.orientation.x = orientation[0]
+            rotated_pose.orientation.y = orientation[1]
+            rotated_pose.orientation.z = orientation[2]
+            rotated_pose.orientation.w = orientation[3]
+
+            time = self.get_clock().now()
+            stamp = Time.to_msg(time)
+            pose = self.transform_pose('camera_color_frame', 'map', rotated_pose, time)
 
         pose_stamped = PoseStamped()
         pose_stamped.pose = pose
-        pose_stamped.header.stamp = laser_image.header.stamp #or maybe just stamp depending on format idk
+        pose_stamped.header.stamp = stamp
         pose_stamped.header.frame_id = 'map'
         return pose_stamped
 
