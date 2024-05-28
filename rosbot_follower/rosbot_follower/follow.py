@@ -74,9 +74,10 @@ class Follow(Node):
             self.cmd.linear.x = 0.0     
             self.publisher_.publish(self.cmd)    
          
-    def start_move(self):
-        self.cmd.linear.x = 0.5     
-        self.publisher_.publish(self.cmd)
+    def start_move(self, data):
+        if data:
+            self.cmd.linear.x = 0.5     
+            self.publisher_.publish(self.cmd)
             
 def main(args=None):
     # initialize the ROS communication
