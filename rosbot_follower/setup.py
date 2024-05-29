@@ -25,7 +25,8 @@ setup(
         'console_scripts': [
             f"tracker = {package_name}.tracker:main",
             f"waypoint = {package_name}.waypoint:main",
-            f"follow = {package_name}.follow:main"
+            f"lidar_logger = {package_name}.lidar_logger:main",
+            f"follow = {package_name}.follow:main",
         ],
     },
 )
