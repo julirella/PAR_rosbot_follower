@@ -49,6 +49,9 @@ class Follow(Node):
         #self.start = True
         #self.moving = True
 
+        #flags
+        self.go = False
+
         # create a Twist message
         self.cmd = Twist()
         #self.timer = self.create_timer(self.timer_period, self.motion)
@@ -76,9 +79,12 @@ class Follow(Node):
         # Save the frontal laser scan info at 0°
         sections = self.divide_sections(msg)
 
-        if sections['front'] < 0.8:
+        if sections['front'] < 0.5:
+            self.go = False
             self.cmd.linear.x = 0.0     
-            self.cmd_publisher_.publish(self.cmd)    
+            self.cmd_publisher_.publish(self.cmd)  
+        else:
+            self.go = True  
          
     # def start_move(self, data):
     #     if data:
@@ -86,12 +92,13 @@ class Follow(Node):
     #         self.publisher_.publish(self.cmd)
     
     def angular_move_callback(self, msg):
-        self.get_logger().info(f"follow recieving angular offset {msg}")
-        self.cmd.linear.x = 0.5
-        ang_vel = ANGULAR_GAIN*(CAMERA_WIDTH/2 - msg.data)
-        if ang_vel <= -MIN_ANG_VEL or ang_vel >= MIN_ANG_VEL:
-            self.cmd.angular.z = max(-MAX_ANG_VEL, min(ang_vel, MAX_ANG_VEL))
-        self.cmd_publisher_.publish(self.cmd)
+        if self.go == True:
+            self.get_logger().info(f"follow recieving angular offset {msg}")
+            self.cmd.linear.x = 0.5
+            ang_vel = ANGULAR_GAIN*(CAMERA_WIDTH/2 - msg.data)
+            if ang_vel <= -MIN_ANG_VEL or ang_vel >= MIN_ANG_VEL:
+                self.cmd.angular.z = max(-MAX_ANG_VEL, min(ang_vel, MAX_ANG_VEL))
+            self.cmd_publisher_.publish(self.cmd)
             
 def main(args=None):
     # initialize the ROS communication
