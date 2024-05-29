@@ -7,7 +7,7 @@ from rclpy.executors import MultiThreadedExecutor
 from rclpy.time import Time
 
 
-from std_msgs.msg import Float32MultiArray
+from std_msgs.msg import Float32MultiArray, Float64
 from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import PoseStamped, Pose
 import tf2_geometry_msgs
@@ -38,6 +38,7 @@ class Tracker(Node):
         
         #publishers
         self.robot_pose_pub = self.create_publisher(PoseStamped, '/follow/pose', 10)
+        self.angular_offset_pub = self.create_publisher(Float64, '/follow/angular_gain', 10)
 
         self.laser_scan = LaserScan()
 
@@ -138,44 +139,48 @@ class Tracker(Node):
 
         #in image coordinates
         centre_x, _ = self.get_centre_index(dst_pts)
-        angle = self.angle_from_image_index_rad(centre_x)
+        msg = Float64()
+        msg.data = float(centre_x)
+        self.get_logger().info(f"tracker sending angular offset {msg}")
+        self.angular_offset_pub.publish(msg)
+        # angle = self.angle_from_image_index_rad(centre_x)
         
-        if self.whole_target_pos:
-            laser_image = self.laser_scan
+        # if self.whole_target_pos:
+        #     laser_image = self.laser_scan
 
-            object_distance = self.get_distance_from_laser_scan(laser_image.ranges, centre_x)
+        #     object_distance = self.get_distance_from_laser_scan(laser_image.ranges, centre_x)
             
-            #from now on laser frame coordinates, continuing as if laser frame and rgb camera frame were the same
-            laser_frame_x = object_distance * np.cos(angle)
-            laser_frame_y = object_distance * np.sin(angle)
+        #     #from now on laser frame coordinates, continuing as if laser frame and rgb camera frame were the same
+        #     laser_frame_x = object_distance * np.cos(angle)
+        #     laser_frame_y = object_distance * np.sin(angle)
 
-            laser_pose = self.generate_origin_pose()
+        #     laser_pose = self.generate_origin_pose()
 
-            # - because laser is the other way round from everything else
-            laser_pose.position.x = - laser_frame_x
-            laser_pose.position.y = - laser_frame_y
+        #     # - because laser is the other way round from everything else
+        #     laser_pose.position.x = - laser_frame_x
+        #     laser_pose.position.y = - laser_frame_y
 
-            # self.get_logger().info(f"cam frame pose: x: {laser_frame_x}, y: {laser_frame_y}")
+        #     # self.get_logger().info(f"cam frame pose: x: {laser_frame_x}, y: {laser_frame_y}")
 
-            stamp = laser_image.header.stamp
-            pose = self.transform_pose('laser', 'map', laser_pose, Time.from_msg(stamp))
-        else:
-            rotated_pose = self.generate_origin_pose()
-            orientation = quaternion_from_euler(0, 0, angle) #angle is around z axis so yaw
-            rotated_pose.orientation.x = orientation[0]
-            rotated_pose.orientation.y = orientation[1]
-            rotated_pose.orientation.z = orientation[2]
-            rotated_pose.orientation.w = orientation[3]
+        #     stamp = laser_image.header.stamp
+        #     pose = self.transform_pose('laser', 'map', laser_pose, Time.from_msg(stamp))
+        # else:
+        #     rotated_pose = self.generate_origin_pose()
+        #     orientation = quaternion_from_euler(0, 0, angle) #angle is around z axis so yaw
+        #     rotated_pose.orientation.x = orientation[0]
+        #     rotated_pose.orientation.y = orientation[1]
+        #     rotated_pose.orientation.z = orientation[2]
+        #     rotated_pose.orientation.w = orientation[3]
 
-            time = self.get_clock().now()
-            stamp = Time.to_msg(time)
-            pose = self.transform_pose('camera_color_frame', 'map', rotated_pose, time)
+        #     time = self.get_clock().now()
+        #     stamp = Time.to_msg(time)
+        #     pose = self.transform_pose('camera_color_frame', 'map', rotated_pose, time)
 
-        pose_stamped = PoseStamped()
-        pose_stamped.pose = pose
-        pose_stamped.header.stamp = stamp
-        pose_stamped.header.frame_id = 'map'
-        return pose_stamped
+        # pose_stamped = PoseStamped()
+        # pose_stamped.pose = pose
+        # pose_stamped.header.stamp = stamp
+        # pose_stamped.header.frame_id = 'map'
+        # return pose_stamped
 
     def publish_pose(self, pose):
         self.robot_pose_pub.publish(pose)
@@ -186,8 +191,9 @@ class Tracker(Node):
     def object_callback(self, object_msg):
         data = object_msg.data
         if len(data) > 0:
-            followed_robot_pose = self.calculate_pose_from_object(data)
-            self.publish_pose(followed_robot_pose)
+            self.calculate_pose_from_object(data)
+            # followed_robot_pose = self.calculate_pose_from_object(data)
+            # self.publish_pose(followed_robot_pose)
             #instead of publishing the pose we could just call another function to navigate us here
             
 

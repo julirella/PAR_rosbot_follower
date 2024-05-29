@@ -25,6 +25,7 @@ setup(
         'console_scripts': [
             f"tracker = {package_name}.tracker:main",
             f"waypoint = {package_name}.waypoint:main",
+            f"follow = {package_name}.follow:main"
         ],
     },
 )
