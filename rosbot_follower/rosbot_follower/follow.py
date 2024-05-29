@@ -8,12 +8,17 @@ from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseWithCovariance
 from rclpy.qos import ReliabilityPolicy, QoSProfile
-from std_msgs.msg import Bool
+from std_msgs.msg import Bool, Float64
 import numpy as np
 
 import geometry_msgs.msg
 import tf2_geometry_msgs
 import tf2_ros
+
+CAMERA_WIDTH = 640
+ANGULAR_GAIN = 0.002
+MIN_ANG_VEL = 0.15
+MAX_ANG_VEL = 0.5
 
 class Follow(Node):
 
@@ -23,12 +28,13 @@ class Follow(Node):
         super().__init__('follow')
         # create the publisher object
         self.cmd_publisher_ = self.create_publisher(Twist, 'cmd_vel', 10)
-        self.follow_subscriber = self.create_subscription(
-                                Bool,
-                                '/follow',
-                                self.start_move,
-                                10
-                        )
+        # self.follow_subscriber = self.create_subscription(
+        #                         Bool,
+        #                         '/follow',
+        #                         self.start_move,
+        #                         10
+        #                 )
+        self.anglular_offset_subscriber = self.create_subscription(Float64, '/follow/angular_gain', self.angular_move_callback, 10)
         self.laser_subscriber = self.create_subscription(LaserScan, '/scan', self.laser_callback, QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE))
 
         #self.subscriber = self.create_subscription(Odometry, '/odom', self.odom_callback, QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE))
@@ -42,6 +48,9 @@ class Follow(Node):
         #self.facing = 0
         #self.start = True
         #self.moving = True
+
+        #flags
+        self.go = False
 
         # create a Twist message
         self.cmd = Twist()
@@ -70,14 +79,26 @@ class Follow(Node):
         # Save the frontal laser scan info at 0°
         sections = self.divide_sections(msg)
 
-        if sections['front'] < 0.8:
+        if sections['front'] < 0.5:
+            self.go = False
             self.cmd.linear.x = 0.0     
-            self.publisher_.publish(self.cmd)    
+            self.cmd_publisher_.publish(self.cmd)  
+        else:
+            self.go = True  
          
-    def start_move(self, data):
-        if data:
-            self.cmd.linear.x = 0.5     
-            self.publisher_.publish(self.cmd)
+    # def start_move(self, data):
+    #     if data:
+    #         self.cmd.linear.x = 0.5     
+    #         self.publisher_.publish(self.cmd)
+    
+    def angular_move_callback(self, msg):
+        if self.go == True:
+            self.get_logger().info(f"follow recieving angular offset {msg}")
+            self.cmd.linear.x = 0.5
+            ang_vel = ANGULAR_GAIN*(CAMERA_WIDTH/2 - msg.data)
+            if ang_vel <= -MIN_ANG_VEL or ang_vel >= MIN_ANG_VEL:
+                self.cmd.angular.z = max(-MAX_ANG_VEL, min(ang_vel, MAX_ANG_VEL))
+            self.cmd_publisher_.publish(self.cmd)
             
 def main(args=None):
     # initialize the ROS communication
