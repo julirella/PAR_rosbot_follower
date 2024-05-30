@@ -1,4 +1,6 @@
 from setuptools import find_packages, setup
+from glob import glob
+import os
 
 package_name = 'rosbot_follower'
 
@@ -7,8 +9,9 @@ setup(
     version='0.0.0',
     packages=find_packages(exclude=['test']),
     data_files=[
-        ('share/ament_index/resource_index/packages',
-            ['resource/' + package_name]),
+        ('share/ament_index/resource_index/packages', ['resource/' + package_name]),
+        (os.path.join('share', package_name, 'launch'), glob('launch/*.launch')),
+        (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py')),
         ('share/' + package_name, ['package.xml']),
     ],
     install_requires=['setuptools'],
@@ -20,6 +23,10 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            f"tracker = {package_name}.tracker:main",
+            f"waypoint = {package_name}.waypoint:main",
+            f"lidar_logger = {package_name}.lidar_logger:main",
+            f"follow = {package_name}.follow:main",
         ],
     },
 )
