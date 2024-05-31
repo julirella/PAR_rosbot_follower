@@ -30,45 +30,26 @@ class Follow(Node):
         # Here you have the class constructor
         # call the class constructor
         super().__init__('follow')
+
         # create the publisher object
         self.cmd_publisher_ = self.create_publisher(Twist, 'cmd_vel', 10)
-        # self.follow_subscriber = self.create_subscription(
-        #                         Bool,
-        #                         '/follow',
-        #                         self.start_move,
-        #                         10
-        #                 )
+
+        # create subscribers       
         self.anglular_offset_subscriber = self.create_subscription(Float64, '/follow/angular_gain', self.angular_move_callback, 10)
         self.laser_subscriber = self.create_subscription(LaserScan, '/scan', self.laser_callback, QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE))
-        # self.fr_subscriber = self.create_subscription(Range, '/range/fr', self.fr_callback, 10)
-        # self.fl_subscriber = self.create_subscription(Range, '/range/fl', self.fl_callback, QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE))
-        #self.subscriber = self.create_subscription(Odometry, '/odom', self.odom_callback, QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE))
-        # define the timer period for 0.5 seconds
-        #self.timer_period = 0.5
-        # define the variable to save the received info
+       
+        # laser scan variables
         self.fr_dst = 0
         self.fl_dst = 0
         self.laser_forward = 0
-        #self.laser_left = 0
-        #self.laser_rear_left = 0
-        #self.laser_rear_right = 0     
-        #self.facing = 0
-        #self.start = True
-        #self.moving = True
-
-        #flags
+        
+        # flags
         self.go = False
 
         # create a Twist message
         self.cmd = Twist()
-        #self.timer = self.create_timer(self.timer_period, self.motion)
 
-        # transform
-        #self.tf_buffer = tf2_ros.buffer.Buffer()
-        #self.tf_listener = tf2_ros.transform_listener.TransformListener(self.tf_buffer, self)
-
-        # Setup timer callback
-        #self.timer = self.create_timer(1.0, self.transform)
+    # Method to divide laser scan readings into sections
     def divide_sections(self, msg):
         length = len(msg.ranges)
         each_div = length // 8
@@ -80,33 +61,25 @@ class Follow(Node):
             "fleft": min(msg.ranges[each_div // 2 : each_div]),
             "fright": min(msg.ranges[front_start - each_div // 2 : front_start]),
         }
+
         return sections
     
     def laser_callback(self,msg):
-        # Save the frontal laser scan info at 0°
         sections = self.divide_sections(msg)
         front_dst = sections['front']
 
         if front_dst < DESIRED_DIST:
-            self.get_logger().info(f"something is too close")
-            self.cmd.linear.x = 0.0     
+            self.cmd.linear.x = 0.0 
+            self.get_logger().info(f"something is too close")    
         else:
             self.cmd.linear.x = LINEAR_GAIN*(front_dst - DESIRED_DIST)
             self.get_logger().info(f"ready to go, linear velocity: {self.cmd.linear.x}")
 
-
-        # self.get_logger().info(f"publishing cmd_vel: {self.cmd}")
-        # self.cmd_publisher_.publish(self.cmd)  
-         
-    # def start_move(self, data):
-    #     if data:
-    #         self.cmd.linear.x = 0.5     
-    #         self.publisher_.publish(self.cmd)
-
-    
+    # Currently unused, may be used to improve collision avoidance
     def fr_callback(self, msg):
         self.fr_dst = msg.range
 
+    # Currently unused, may be used to improve collision avoidance
     def fl_callback(self, msg):
         self.fl_dst = msg.range
         avg_dst = (self.fr_dst + self.fl_dst) / 2
@@ -120,10 +93,11 @@ class Follow(Node):
 
     def angular_move_callback(self, msg):
         self.get_logger().info(f"follow recieving angular offset {msg}")
-        
         ang_vel = ANGULAR_GAIN*(CAMERA_WIDTH/2 - msg.data)
+        
         if ang_vel <= -MIN_ANG_VEL or ang_vel >= MIN_ANG_VEL:
             self.cmd.angular.z = max(-MAX_ANG_VEL, min(ang_vel, MAX_ANG_VEL))
+
         self.get_logger().info(f"publishing cmd_vel: {self.cmd}")
         self.cmd_publisher_.publish(self.cmd)
             

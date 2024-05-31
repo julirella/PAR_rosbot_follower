@@ -10,7 +10,9 @@ from rclpy.action import ActionClient
 from rclpy.node import Node
 from geometry_msgs.msg import PoseStamped
 
-
+# Waypoint navigation is currently unused in current form
+# Node will be re-purposed from navigating to recognised object in camera
+# to navigating to predicated location when target is not detected
 class NavToPoseActionClient(Node):
 
     def __init__(self):
