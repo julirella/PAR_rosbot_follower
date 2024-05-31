@@ -4,7 +4,7 @@ from rclpy.node import Node
 # import the Twist module from geometry_msgs interface
 from geometry_msgs.msg import Twist
 # import the LaserScan module from sensor_msgs interface
-from sensor_msgs.msg import LaserScan
+from sensor_msgs.msg import LaserScan, Range
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseWithCovariance
 from rclpy.qos import ReliabilityPolicy, QoSProfile
@@ -19,6 +19,10 @@ CAMERA_WIDTH = 640
 ANGULAR_GAIN = 0.002
 MIN_ANG_VEL = 0.15
 MAX_ANG_VEL = 0.5
+DESIRED_DIST = 0.6
+MIN_LIN_VEL  = 0.05
+MAX_LIN_VEL  = 0.4
+LINEAR_GAIN  = 0.4
 
 class Follow(Node):
 
@@ -36,11 +40,14 @@ class Follow(Node):
         #                 )
         self.anglular_offset_subscriber = self.create_subscription(Float64, '/follow/angular_gain', self.angular_move_callback, 10)
         self.laser_subscriber = self.create_subscription(LaserScan, '/scan', self.laser_callback, QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE))
-
+        # self.fr_subscriber = self.create_subscription(Range, '/range/fr', self.fr_callback, 10)
+        # self.fl_subscriber = self.create_subscription(Range, '/range/fl', self.fl_callback, QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE))
         #self.subscriber = self.create_subscription(Odometry, '/odom', self.odom_callback, QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE))
         # define the timer period for 0.5 seconds
         #self.timer_period = 0.5
         # define the variable to save the received info
+        self.fr_dst = 0
+        self.fl_dst = 0
         self.laser_forward = 0
         #self.laser_left = 0
         #self.laser_rear_left = 0
@@ -78,27 +85,47 @@ class Follow(Node):
     def laser_callback(self,msg):
         # Save the frontal laser scan info at 0°
         sections = self.divide_sections(msg)
+        front_dst = sections['front']
 
-        if sections['front'] < 0.5:
-            self.go = False
+        if front_dst < DESIRED_DIST:
+            self.get_logger().info(f"something is too close")
             self.cmd.linear.x = 0.0     
-            self.cmd_publisher_.publish(self.cmd)  
         else:
-            self.go = True  
+            self.cmd.linear.x = LINEAR_GAIN*(front_dst - DESIRED_DIST)
+            self.get_logger().info(f"ready to go, linear velocity: {self.cmd.linear.x}")
+
+
+        # self.get_logger().info(f"publishing cmd_vel: {self.cmd}")
+        # self.cmd_publisher_.publish(self.cmd)  
          
     # def start_move(self, data):
     #     if data:
     #         self.cmd.linear.x = 0.5     
     #         self.publisher_.publish(self.cmd)
+
     
+    def fr_callback(self, msg):
+        self.fr_dst = msg.range
+
+    def fl_callback(self, msg):
+        self.fl_dst = msg.range
+        avg_dst = (self.fr_dst + self.fl_dst) / 2
+
+        if avg_dst < DESIRED_DIST:
+            self.cmd.linear.x = LINEAR_GAIN*(avg_dst - DESIRED_DIST)
+        else:
+            self.cmd.linear.x = 0
+        
+        self.cmd_publisher_.publish(self.cmd)
+
     def angular_move_callback(self, msg):
-        if self.go == True:
-            self.get_logger().info(f"follow recieving angular offset {msg}")
-            self.cmd.linear.x = 0.5
-            ang_vel = ANGULAR_GAIN*(CAMERA_WIDTH/2 - msg.data)
-            if ang_vel <= -MIN_ANG_VEL or ang_vel >= MIN_ANG_VEL:
-                self.cmd.angular.z = max(-MAX_ANG_VEL, min(ang_vel, MAX_ANG_VEL))
-            self.cmd_publisher_.publish(self.cmd)
+        self.get_logger().info(f"follow recieving angular offset {msg}")
+        
+        ang_vel = ANGULAR_GAIN*(CAMERA_WIDTH/2 - msg.data)
+        if ang_vel <= -MIN_ANG_VEL or ang_vel >= MIN_ANG_VEL:
+            self.cmd.angular.z = max(-MAX_ANG_VEL, min(ang_vel, MAX_ANG_VEL))
+        self.get_logger().info(f"publishing cmd_vel: {self.cmd}")
+        self.cmd_publisher_.publish(self.cmd)
             
 def main(args=None):
     # initialize the ROS communication
