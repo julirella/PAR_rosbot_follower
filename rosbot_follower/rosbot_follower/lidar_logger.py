@@ -1,19 +1,10 @@
 import rclpy
 # import the ROS2 python libraries
 from rclpy.node import Node
-# import the Twist module from geometry_msgs interface
-from geometry_msgs.msg import Twist
 # import the LaserScan module from sensor_msgs interface
 from sensor_msgs.msg import LaserScan
-from nav_msgs.msg import Odometry
-from geometry_msgs.msg import PoseWithCovariance
 from rclpy.qos import ReliabilityPolicy, QoSProfile
 from std_msgs.msg import Bool
-import numpy as np
-
-import geometry_msgs.msg
-import tf2_geometry_msgs
-import tf2_ros
 
 class LidarLogger(Node):
 
