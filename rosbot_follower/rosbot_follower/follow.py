@@ -16,7 +16,7 @@ import tf2_geometry_msgs
 import tf2_ros
 
 CAMERA_WIDTH = 640
-ANGULAR_GAIN = 0.002
+ANGULAR_GAIN = 0.01
 MIN_ANG_VEL = 0.15
 MAX_ANG_VEL = 0.5
 DESIRED_DIST = 0.6
@@ -35,7 +35,7 @@ class Follow(Node):
         self.cmd_publisher_ = self.create_publisher(Twist, 'cmd_vel', 10)
 
         # create subscribers       
-        self.anglular_offset_subscriber = self.create_subscription(Float64, '/follow/angular_gain', self.angular_move_callback, 10)
+        self.anglular_offset_subscriber = self.create_subscription(Float64, '/follow/main_angle', self.angular_move_callback, 10)
         self.laser_subscriber = self.create_subscription(LaserScan, '/scan', self.laser_callback, QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE))
        
         # laser scan variables
@@ -48,6 +48,8 @@ class Follow(Node):
 
         # create a Twist message
         self.cmd = Twist()
+        self.get_logger().info("***************follow launched********************")
+
 
     # Method to divide laser scan readings into sections
     def divide_sections(self, msg):
@@ -70,10 +72,10 @@ class Follow(Node):
 
         if front_dst < DESIRED_DIST:
             self.cmd.linear.x = 0.0 
-            self.get_logger().info(f"something is too close")    
+            # self.get_logger().info(f"something is too close")    
         else:
             self.cmd.linear.x = LINEAR_GAIN*(front_dst - DESIRED_DIST)
-            self.get_logger().info(f"ready to go, linear velocity: {self.cmd.linear.x}")
+            # self.get_logger().info(f"ready to go, linear velocity: {self.cmd.linear.x}")
 
     # Currently unused, may be used to improve collision avoidance
     def fr_callback(self, msg):
@@ -92,8 +94,8 @@ class Follow(Node):
         self.cmd_publisher_.publish(self.cmd)
 
     def angular_move_callback(self, msg):
-        self.get_logger().info(f"follow recieving angular offset {msg}")
-        ang_vel = ANGULAR_GAIN*(CAMERA_WIDTH/2 - msg.data)
+        self.get_logger().info(f"follow recieving angle {msg}")
+        ang_vel = ANGULAR_GAIN*msg.data #TODO: IF IT BRAKES, REMOVE MINUS!!!!!
         
         if ang_vel <= -MIN_ANG_VEL or ang_vel >= MIN_ANG_VEL:
             self.cmd.angular.z = max(-MAX_ANG_VEL, min(ang_vel, MAX_ANG_VEL))

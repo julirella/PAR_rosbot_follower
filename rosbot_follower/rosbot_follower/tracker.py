@@ -28,15 +28,11 @@ class Tracker(Node):
             10, callback_group=self.reentrant_group_1)
         
         # Publishers
-        self.robot_pose_pub = self.create_publisher(PoseStamped, '/follow/pose', 10)
-        self.angular_offset_pub = self.create_publisher(Float64, '/follow/angular_gain', 10)
+        self.angular_offset_pub = self.create_publisher(Float64, '/follow/camera_angle', 10)
 
-        # Transform listener
-        self.tf_buffer = tf2_ros.buffer.Buffer()
-        self.tf_listener = tf2_ros.transform_listener.TransformListener(self.tf_buffer, self)
+        self.get_logger().info("***************tracker launched********************")
 
-        # Flags
-        self.whole_target_pos = False
+
 
     def dst_points(self, detected_object_lst):
         object_width = detected_object_lst[1]
@@ -66,22 +62,38 @@ class Tracker(Node):
         # self.get_logger().info(f'centre indexes: x: {x}, y: {y}')
         return x, y
     
-    def calculate_pose_from_object(self, object_msg_data):
+    def angle_from_image_index(self, x_index):
+        #centre offset should be positive if image pixel is to the left of image cenre
+        centre_offset = IMAGE_WIDTH / 2 - x_index
+        degrees_per_pixel = CAMERA_FIELD_OF_VIEW / IMAGE_WIDTH
+        angle = centre_offset * degrees_per_pixel
+        self.get_logger().info(f"angle (deg): {angle}")
+        return angle
+    
+    def calculate_angle_from_object(self, object_msg_data):
 
         dst_pts = self.dst_points(object_msg_data) 
 
         #in image coordinates
         centre_x, _ = self.get_centre_index(dst_pts)
+        angle = self.angle_from_image_index(centre_x)
         msg = Float64()
-        msg.data = float(centre_x)
+        msg.data = float(angle)
         
-        self.get_logger().info(f"tracker sending angular offset {msg}")
+        self.get_logger().info(f"tracker sending camera angle {msg}")
         self.angular_offset_pub.publish(msg)
         
     def object_callback(self, object_msg):
+        
         data = object_msg.data
         if len(data) > 0:
-            self.calculate_pose_from_object(data)
+            self.calculate_angle_from_object(data)
+            # self.get_logger().info(f"object recognised")
+        else:
+            # self.get_logger().info(f"NO object recognised")
+            ...
+
+            
 
 def main(args=None):
     rclpy.init(args=args)

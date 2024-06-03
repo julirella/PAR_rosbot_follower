@@ -96,4 +96,22 @@ def generate_launch_description():
     )
     ld.add_action(node)
 
+    # main controller node **********************************************************************************
+    node = Node(
+        package='rosbot_follower',
+        executable='main_controller',
+        name='main_controller',
+        output='screen',
+    )
+    ld.add_action(node)
+    
+    # follow node **********************************************************************************
+    node = Node(
+        package='rosbot_follower',
+        executable='follow',
+        name='follow',
+        output='screen',
+    )
+    ld.add_action(node)
+
     return ld
