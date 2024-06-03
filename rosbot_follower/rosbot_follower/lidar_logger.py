@@ -24,8 +24,10 @@ class LidarLogger(Node):
 
     def reading(self, data):
         msg = self.scan
+        start = 0
+        stop = 359
         if data and msg:
-            for reading in range(-90, 90):
+            for reading in range(start*2, stop*2):
                self.get_logger().info(f'{reading/2}: {msg.ranges[reading]}')
 
     def laser_callback(self,msg):
