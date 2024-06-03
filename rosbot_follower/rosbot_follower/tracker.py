@@ -30,6 +30,9 @@ class Tracker(Node):
         # Publishers
         self.angular_offset_pub = self.create_publisher(Float64, '/follow/camera_angle', 10)
 
+        self.get_logger().info("***************tracker launched********************")
+
+
 
     def dst_points(self, detected_object_lst):
         object_width = detected_object_lst[1]
@@ -73,17 +76,24 @@ class Tracker(Node):
 
         #in image coordinates
         centre_x, _ = self.get_centre_index(dst_pts)
-        angle = self.angle_from_image_index(self, centre_x)
+        angle = self.angle_from_image_index(centre_x)
         msg = Float64()
         msg.data = float(angle)
         
-        self.get_logger().info(f"tracker sending angular offset {msg}")
+        self.get_logger().info(f"tracker sending camera angle {msg}")
         self.angular_offset_pub.publish(msg)
         
     def object_callback(self, object_msg):
+        
         data = object_msg.data
         if len(data) > 0:
             self.calculate_angle_from_object(data)
+            # self.get_logger().info(f"object recognised")
+        else:
+            # self.get_logger().info(f"NO object recognised")
+            ...
+
+            
 
 def main(args=None):
     rclpy.init(args=args)

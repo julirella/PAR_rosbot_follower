@@ -27,6 +27,7 @@ setup(
             f"waypoint = {package_name}.waypoint:main",
             f"lidar_logger = {package_name}.lidar_logger:main",
             f"follow = {package_name}.follow:main",
+            f"main_controller = {package_name}.main_controller:main"
         ],
     },
 )

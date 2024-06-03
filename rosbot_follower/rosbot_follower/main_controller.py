@@ -18,16 +18,21 @@ class MainController(Node):
         #publishers
         self.angle_pub = self.create_publisher(Float64, 'follow/main_angle', 10)
 
-        self.lastCamReading = time.Time(0)
+        self.lastCamReading = time.Time()
+
+        self.get_logger().info("***************main controller launched********************")
+
 
     def camera_callback(self, msg):
+        self.get_logger().info(f"main controller receiving camera angle and sending it on")
         self.angle_pub.publish(msg)
         self.lastCamReading = self.get_clock().now()
 
     def lidar_callback(self, msg):
         timeSinceCam = self.get_clock().now() - self.lastCamReading
         if timeSinceCam > duration.Duration(seconds=0.5):
-            self.angle_pub.publish(msg)        
+            self.get_logger().info(f"camera angle timed out, time since last msg: {timeSinceCam}")
+            # self.angle_pub.publish(msg)        
     
 
 def main(args=None):
