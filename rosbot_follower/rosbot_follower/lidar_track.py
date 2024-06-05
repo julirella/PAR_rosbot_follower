@@ -42,6 +42,7 @@ class LidarTrack(Node):
 
         if self.do_compute:
             self.find_edges(msg.ranges)
+            self.get_logger().info(f"Scan processed")
             
         #if self.runs <= 0:
         #    self.do_compute = False
