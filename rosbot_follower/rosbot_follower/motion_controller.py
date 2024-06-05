@@ -36,7 +36,7 @@ class MotionController(Node):
 
         # create subscribers       
         self.laser_subscriber = self.create_subscription(LaserScan, '/scan', self.laser_callback, QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE))
-        self.angular_speed_sub = self.create_subscription(Float64, 'follow/angular_speed', self.angular_spped_callback, 10)
+        self.angular_speed_sub = self.create_subscription(Float64, 'follow/angular_speed', self.angular_speed_callback, 10)
        
         # laser scan variables
         self.fr_dst = 0

@@ -36,7 +36,6 @@ class Navigator(Node):
 
         # create subscribers       
         self.anglular_offset_subscriber = self.create_subscription(Float64, '/follow/main_angle', self.angular_move_callback, 10)
-        self.laser_subscriber = self.create_subscription(LaserScan, '/scan', self.laser_callback, QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE))
     
         self.get_logger().info("***************navigator launched********************")
 
