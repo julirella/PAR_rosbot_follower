@@ -4,6 +4,7 @@ from rclpy.node import Node
 # import the LaserScan module from sensor_msgs interface
 from sensor_msgs.msg import LaserScan
 from rclpy.qos import ReliabilityPolicy, QoSProfile
+from std_msgs.msg import Float64
 from std_msgs.msg import Bool
 
 from math import sin, radians
@@ -24,8 +25,10 @@ class LidarTrack(Node):
                 self.compute,
                 10
         )
+        self.angular_offset_pub = self.create_publisher(Float64, '/follow/lidar_angle', 10)
         self.runs = 20
         self.do_compute = True
+        self.to_print = True
     
     # To get a reading run file and then in another terminal publish below
     # ros2 topic pub -1 /reading std_msgs/msg/Bool "data: true"
@@ -35,13 +38,13 @@ class LidarTrack(Node):
             self.do_compute = True
 
     def laser_callback(self,msg):
-        self.runs -= 1
+        #self.runs -= 1
 
         if self.do_compute:
             self.find_edges(msg.ranges)
             
-        if self.runs <= 0:
-            self.do_compute = False
+        #if self.runs <= 0:
+        #    self.do_compute = False
 
     def find_edges(self, ranges):
         first_edge = None
@@ -55,47 +58,25 @@ class LidarTrack(Node):
             if range != float('inf') and not first_edge:
                 first_edge = (index, range)
                 last_edge = (index, range)
-                print(f"{index/2}: {range} - FIRST")   
+                #print(f"{index/2}: {range} - FIRST")   
             # if difference between edges is small enough
             elif first_edge and self.within_threshold(last_edge[1], range):
                 last_edge = (index, range)
                 count = 0
-                print(f"{index/2}: {range} - ADD")
+                #print(f"{index/2}: {range} - ADD")
             # If non candidate add to count
             elif first_edge and count < count_thresh:
                 count += 1
-                print(f"{index/2}: {range} - COUNT: {count}") 
+                #print(f"{index/2}: {range} - COUNT: {count}") 
             # if too many consecutive non candidates 
             elif count >= count_thresh: 
-                print("RESET")
+                #print("RESET")
                 self.check_object(first_edge, last_edge, ranges)
                 first_edge = None
                 count = 0
-            else:
-                print(f"{index/2}: {range} - SKIP")
-            #print(f"{index/2} is {range}")
+            #else:
+                #print(f"{index/2}: {range} - SKIP")
     
-    # Real circle
-        # Given: (153, 0.40625), (197, 0.421999990940094)
-        # Middle index: 175
-        # Possible_1: 0.03799998760223389 (middle is 0.3831)
-        # Sensible_edges: 44
-        # CHECK THIS OBJECT: (76.5,0.40625, (98.5,0.421999990940094)
-        # angle: 22.0 is <built-in function radians> radians
-        # hypotenuse: 0.421999990940094
-        # RADIUS: 0.08052139432019034
-        # CANDIDATE
-    # Fake circle
-        # Given: (15, 2.1747500896453857), (23, 2.2139999866485596)
-        # Middle index: 19
-        # Possible_1: 0.022500038146972656
-        # Sensible_edges: 8
-        # CHECK THIS OBJECT: (7.5,2.1747500896453857, (11.5,2.2139999866485596)
-        # angle: 4.0 is <built-in function radians> radians
-        # hypotenuse: 2.2139999866485596
-        # RADIUS: 0.07726748523337859
-        # CANDIDATE
-
     def check_object(self, first_edge, last_edge, ranges):
         found = False
         basic_checks = False
@@ -111,20 +92,20 @@ class LidarTrack(Node):
         elif ranges[middle_index - 1] != float('inf'):
             basic_checks = self.basic_checks(first_edge, last_edge, middle_index - 1, ranges)
 
-        print(f"Sensible_edges: {object_width}")
+        #print(f"Sensible_edges: {object_width}")
 
         if sensible_edges and basic_checks:
             found = True
-            print(f"CHECK THIS OBJECT: ({first_edge[0]/2},{first_edge[1]}, ({last_edge[0]/2},{last_edge[1]})")
-            self.calculate_radius(first_edge, last_edge)
+            #print(f"CHECK THIS OBJECT: ({first_edge[0]/2},{first_edge[1]}, ({last_edge[0]/2},{last_edge[1]})")
+            self.calculate_radius(first_edge, last_edge, middle_index)
         
         return found
 
     def basic_checks(self, first_edge, last_edge, middle_index, ranges):
         
+        #print(f"Given: ({first_edge[0]/2},{first_edge[1]}) ({last_edge[0]/2},{last_edge[1]})")
+        #print(f"Middle index: {middle_index/2}, {ranges[middle_index]}")
 
-        print(f"Given: ({first_edge[0]/2},{first_edge[1]}) ({last_edge[0]/2},{last_edge[1]})")
-        print(f"Middle index: {middle_index/2}, {ranges[middle_index]}")
         max_edge = max(first_edge[1], last_edge[1])
         min_edge = min(first_edge[1], last_edge[1])
         # allow for greater error margin as distance increases
@@ -141,21 +122,22 @@ class LidarTrack(Node):
 
         possibly_circular = compare_edge_middle and compare_edge2_middle and compare_edge_edge
         
-        print(f"Possible: {possibly_circular}")
-        print(f"cem: {compare_edge_middle} {max_lower_thresh} < {max_edge - ranges[middle_index]} < {upper_thresh}")
-        print(f"ce2m: {compare_edge2_middle} {min_lower_thresh} < {min_edge - ranges[middle_index]} < {upper_thresh}")
-        print(f"cee: {compare_edge_edge} {abs(first_edge[1] - last_edge[1])} < {difference_thresh}")        
+        #print(f"Possible: {possibly_circular}")
+        #print(f"cem: {compare_edge_middle} {max_lower_thresh} < {max_edge - ranges[middle_index]} < {upper_thresh}")
+        #print(f"ce2m: {compare_edge2_middle} {min_lower_thresh} < {min_edge - ranges[middle_index]} < {upper_thresh}")
+        #print(f"cee: {compare_edge_edge} {abs(first_edge[1] - last_edge[1])} < {difference_thresh}")        
         return possibly_circular
     
-    def calculate_radius(self, first_edge, last_edge):
+    def calculate_radius(self, first_edge, last_edge, middle_index):
         angle = radians(abs(first_edge[0]/2 - last_edge[0]/2))
         hypotenuse = max(first_edge[1], last_edge[1])
         radius = sin(angle/2)*hypotenuse
-        print(f"angle: {abs(first_edge[0]/2 - last_edge[0]/2)} is {radians} radians")
-        print(f"hypotenuse: {hypotenuse}")
-        print(f"RADIUS: {radius}")
+        #print(f"angle: {abs(first_edge[0]/2 - last_edge[0]/2)} is {radians} radians")
+        #print(f"hypotenuse: {hypotenuse}")
+        #print(f"RADIUS: {radius}")
         if 0.07 < radius < 0.1:
-            print(f"CANDIDATE")
+            #print(f"CANDIDATE")
+            self.publish_angle(middle_index)
 
     def within_threshold(self, last_range, range):
         within = False
@@ -165,6 +147,13 @@ class LidarTrack(Node):
             within = True
         
         return within
+
+    def publish_angle(self, index):
+        msg = Float64()
+        msg.data = float(index/2)
+        
+        self.get_logger().info(f"Angle sent: {msg}")
+        self.angular_offset_pub.publish(msg)
 
 def main(args=None):
     # initialize the ROS communication
