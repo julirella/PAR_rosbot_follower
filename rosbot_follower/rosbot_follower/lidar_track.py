@@ -24,6 +24,7 @@ class LidarTrack(Node):
                 self.compute,
                 10
         )
+        self.runs = 20
         self.do_compute = True
     
     # To get a reading run file and then in another terminal publish below
@@ -34,10 +35,13 @@ class LidarTrack(Node):
             self.do_compute = True
 
     def laser_callback(self,msg):
+        self.runs -= 1
+
         if self.do_compute:
             self.find_edges(msg.ranges)
+            
+        if self.runs <= 0:
             self.do_compute = False
-
 
     def find_edges(self, ranges):
         first_edge = None
@@ -71,34 +75,78 @@ class LidarTrack(Node):
                 print(f"{index/2}: {range} - SKIP")
             #print(f"{index/2} is {range}")
     
+    # Real circle
+        # Given: (153, 0.40625), (197, 0.421999990940094)
+        # Middle index: 175
+        # Possible_1: 0.03799998760223389 (middle is 0.3831)
+        # Sensible_edges: 44
+        # CHECK THIS OBJECT: (76.5,0.40625, (98.5,0.421999990940094)
+        # angle: 22.0 is <built-in function radians> radians
+        # hypotenuse: 0.421999990940094
+        # RADIUS: 0.08052139432019034
+        # CANDIDATE
+    # Fake circle
+        # Given: (15, 2.1747500896453857), (23, 2.2139999866485596)
+        # Middle index: 19
+        # Possible_1: 0.022500038146972656
+        # Sensible_edges: 8
+        # CHECK THIS OBJECT: (7.5,2.1747500896453857, (11.5,2.2139999866485596)
+        # angle: 4.0 is <built-in function radians> radians
+        # hypotenuse: 2.2139999866485596
+        # RADIUS: 0.07726748523337859
+        # CANDIDATE
+
     def check_object(self, first_edge, last_edge, ranges):
         found = False
+        basic_checks = False
         object_width = abs(first_edge[0] - last_edge[0])
-        sensible_edges = 3 <= object_width <= 60
+        sensible_edges = 6 <= object_width <= 60
 
-        # allow for greater error margin as distance increases
-        difference_threshold = 0.02 + 0.015*first_edge[1]
-        
         middle_index = round(max(first_edge[0], last_edge[0]) - abs(first_edge[0] - last_edge[0])/2)
-
-        #print(f"Given: {first_edge}, {last_edge}")
-        #print(f"Middle index: {middle_index}")
+        
         if ranges[middle_index] != float('inf'):
-            edge = max(first_edge[1], last_edge[1])
-            possibly_circular = 0.01 < edge - ranges[middle_index] < 0.13
-        #    print(f"Possible_1: {edge - ranges[middle_index]}") 
-        else:
-            possibly_circular = abs(first_edge[1] - last_edge[1]) < difference_threshold
-        #    print(f"Possible_2: {abs(first_edge[1] - last_edge[1])} < {difference_threshold}")
-        #print(f"Sensible_edges: {object_width}")
+            basic_checks = self.basic_checks(first_edge, last_edge, middle_index, ranges)
+        elif ranges[middle_index + 1] != float('inf'):
+            basic_checks = self.basic_checks(first_edge, last_edge, middle_index + 1, ranges)
+        elif ranges[middle_index - 1] != float('inf'):
+            basic_checks = self.basic_checks(first_edge, last_edge, middle_index - 1, ranges)
 
-        if sensible_edges and possibly_circular:
+        print(f"Sensible_edges: {object_width}")
+
+        if sensible_edges and basic_checks:
             found = True
             print(f"CHECK THIS OBJECT: ({first_edge[0]/2},{first_edge[1]}, ({last_edge[0]/2},{last_edge[1]})")
             self.calculate_radius(first_edge, last_edge)
         
         return found
 
+    def basic_checks(self, first_edge, last_edge, middle_index, ranges):
+        
+
+        print(f"Given: ({first_edge[0]/2},{first_edge[1]}) ({last_edge[0]/2},{last_edge[1]})")
+        print(f"Middle index: {middle_index/2}, {ranges[middle_index]}")
+        max_edge = max(first_edge[1], last_edge[1])
+        min_edge = min(first_edge[1], last_edge[1])
+        # allow for greater error margin as distance increases
+        threshold_factor = min(0.011, 0.007*max_edge)
+
+        max_lower_thresh = 0.028 - threshold_factor
+        min_lower_thresh = 0.017 - threshold_factor
+        upper_thresh = 0.06
+        difference_thresh = 0.025
+
+        compare_edge_middle = max_lower_thresh < max_edge - ranges[middle_index] < upper_thresh
+        compare_edge2_middle = min_lower_thresh < min_edge - ranges[middle_index] < upper_thresh
+        compare_edge_edge = abs(first_edge[1] - last_edge[1]) < difference_thresh
+
+        possibly_circular = compare_edge_middle and compare_edge2_middle and compare_edge_edge
+        
+        print(f"Possible: {possibly_circular}")
+        print(f"cem: {compare_edge_middle} {max_lower_thresh} < {max_edge - ranges[middle_index]} < {upper_thresh}")
+        print(f"ce2m: {compare_edge2_middle} {min_lower_thresh} < {min_edge - ranges[middle_index]} < {upper_thresh}")
+        print(f"cee: {compare_edge_edge} {abs(first_edge[1] - last_edge[1])} < {difference_thresh}")        
+        return possibly_circular
+    
     def calculate_radius(self, first_edge, last_edge):
         angle = radians(abs(first_edge[0]/2 - last_edge[0]/2))
         hypotenuse = max(first_edge[1], last_edge[1])
@@ -106,7 +154,7 @@ class LidarTrack(Node):
         print(f"angle: {abs(first_edge[0]/2 - last_edge[0]/2)} is {radians} radians")
         print(f"hypotenuse: {hypotenuse}")
         print(f"RADIUS: {radius}")
-        if 0.04 < radius < 0.1:
+        if 0.07 < radius < 0.1:
             print(f"CANDIDATE")
 
     def within_threshold(self, last_range, range):
