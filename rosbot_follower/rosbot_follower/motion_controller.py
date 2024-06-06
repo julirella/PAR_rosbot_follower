@@ -96,7 +96,7 @@ class MotionController(Node):
     def angular_speed_callback(self, msg):
         ang_vel = msg.data
         self.cmd.angular.z = ang_vel
-        self.get_logger().info(f"publishing cmd_vel: {self.cmd}")
+        # self.get_logger().info(f"publishing cmd_vel: {self.cmd}")
         self.cmd_publisher_.publish(self.cmd)
             
 def main(args=None):
