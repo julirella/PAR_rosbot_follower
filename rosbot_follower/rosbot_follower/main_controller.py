@@ -24,7 +24,7 @@ class MainController(Node):
 
         #subscribers
         self.camera_sub = self.create_subscription(Float64, 'follow/camera_angle', self.camera_callback, 10)
-        self.lidar_sub = self.create_subscription(Float64, 'follow/lidar_angle', self.lidar_callback, 10)
+        # self.lidar_sub = self.create_subscription(Float64, 'follow/lidar_angle', self.lidar_callback, 10)
         self.scan_sub = self.create_subscription(LaserScan, '/scan', self.scan_callback, 10) #change scan to follow/scan later
 
         #publishers
@@ -77,7 +77,7 @@ class MainController(Node):
                 break
             distance = ranges[index]
 
-        self.get_logger().info(f"\nDISTANCE CALCULATION:*************************************\nangle: {angle}\ndistance at angle: {distance}\nindex used: {index}\nindex expected: {angle * 2}")
+        # self.get_logger().info(f"\nDISTANCE CALCULATION:*************************************\nangle: {angle}\ndistance at angle: {distance}\nindex used: {index}\nindex expected: {angle * 2}")
         return distance
     
     def generate_origin_pose(self):
@@ -159,7 +159,7 @@ class MainController(Node):
                 pose.position.y = dist * np.sin(rad_angle)
                 map_pose = self.transform_pose('base_link', 'map', pose, stamp) #assuming this updates the stamp in map_pose too
                 self.waypoints.append(map_pose)
-                self.get_logger().info(f"\nWAYPOINT:\ndistance calculated:{dist}\npose: x: {pose.position.x} y: {pose.position.y}\nmap pose: x: {map_pose.position.x} y: {map_pose.position.y}")
+                # self.get_logger().info(f"\nWAYPOINT:\ndistance calculated:{dist}\npose: x: {pose.position.x} y: {pose.position.y}\nmap pose: x: {map_pose.position.x} y: {map_pose.position.y}")
                 # self.publish_marker_pos(map_pose)
                 self.publish_hazard_array()
                 time.sleep(1)

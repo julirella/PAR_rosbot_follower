@@ -18,6 +18,8 @@ class LidarLogger(Node):
                 10
         )
         self.scan = None
+
+        self.get_logger().info("***************lidar logger launched********************")
     
     # To get a reading run file and then in another terminal publish below
     # ros2 topic pub -1 /reading std_msgs/msg/Bool "data: true"
