@@ -58,10 +58,10 @@ class MainController(Node):
         self.lastCamReading = self.get_clock().now()
 
     def lidar_callback(self, msg):
-        timeSinceCam = self.get_clock().now() - self.lastCamReading
-        if timeSinceCam > duration.Duration(seconds=0.5):
-            self.get_logger().info(f"camera angle timed out, time since last msg: {timeSinceCam}")
-            # self.angle_pub.publish(msg)     
+        #timeSinceCam = self.get_clock().now() - self.lastCamReading
+        #if timeSinceCam > duration.Duration(seconds=0.5):
+        #    self.get_logger().info(f"camera angle timed out, time since last msg: {timeSinceCam}")
+        self.angle_pub.publish(msg)        
     
     def get_distance_from_laser_scan(self, ranges, angle):
         index = int(angle)*2
