@@ -29,9 +29,11 @@ class LidarTrack(Node):
         #self.runs = 20
         self.do_compute = True
         self.to_print = True
-    
+        self.get_logger().info("***************lidar track launched********************")
+ 
     # Currently compute set to always true, this method allows us
     # in future to toggle lidar processing (when out of camera)
+ 
     def compute(self, data):
         if data:
             self.do_compute = True

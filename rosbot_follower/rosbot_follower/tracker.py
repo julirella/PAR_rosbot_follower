@@ -14,7 +14,7 @@ import tf2_ros
 import numpy as np
 import cv2
 
-CAMERA_FIELD_OF_VIEW = 120 #still not sure about this one
+CAMERA_FIELD_OF_VIEW = 63.3 #still not sure about this one
 IMAGE_WIDTH = 640
 
 class Tracker(Node):
@@ -67,7 +67,7 @@ class Tracker(Node):
         centre_offset = IMAGE_WIDTH / 2 - x_index
         degrees_per_pixel = CAMERA_FIELD_OF_VIEW / IMAGE_WIDTH
         angle = centre_offset * degrees_per_pixel
-        self.get_logger().info(f"angle (deg): {angle}")
+        # self.get_logger().info(f"angle (deg): {angle}")
         return angle
     
     def calculate_angle_from_object(self, object_msg_data):
@@ -80,7 +80,7 @@ class Tracker(Node):
         msg = Float64()
         msg.data = float(angle)
         
-        self.get_logger().info(f"tracker sending camera angle {msg}")
+        # self.get_logger().info(f"tracker sending camera angle {msg}")
         self.angular_offset_pub.publish(msg)
         
     def object_callback(self, object_msg):

@@ -40,7 +40,7 @@ class Navigator(Node):
         self.get_logger().info("***************navigator launched********************")
 
     def angular_move_callback(self, msg):
-        self.get_logger().info(f"follow recieving angle {msg}")
+        # self.get_logger().info(f"follow recieving angle {msg}")
         ang_vel = ANGULAR_GAIN*msg.data #TODO: IF IT BRAKES, REMOVE MINUS!!!!!
         
         if ang_vel <= -MIN_ANG_VEL or ang_vel >= MIN_ANG_VEL:
@@ -48,7 +48,7 @@ class Navigator(Node):
 
         msg = Float64()
         msg.data = ang_vel
-        self.get_logger().info(f"publishing angular speed: {msg}")
+        # self.get_logger().info(f"publishing angular speed: {msg}")
         self.angular_speed_publisher.publish(msg)
             
 def main(args=None):
