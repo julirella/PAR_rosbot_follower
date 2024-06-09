@@ -34,9 +34,14 @@ class LidarTrack(Node):
     # Currently compute set to always true, this method allows us
     # in future to toggle lidar processing (when out of camera)
  
-    def compute(self, data):
-        if data:
+    def compute(self, msg):
+        if msg.data:
             self.do_compute = True
+            self.get_logger().info("***************Lidar tracker toggled on***************")
+        else:
+            self.do_compute = False
+            self.get_logger().info("***************Lidar tracker toggled off***************")    
+            
 
     def laser_callback(self,msg):
         
@@ -157,11 +162,19 @@ class LidarTrack(Node):
 
     def publish_angle(self, index):
         msg = Float64()
-        msg.data = float(index/2)
+        msg.data = self.bound_angle(index)
         
         self.get_logger().info(f"Angle sent: {msg}")
         self.angular_offset_pub.publish(msg)
 
+    def bound_angle(self, index):
+        angle = float(index/2)
+
+        if angle > 180:
+            angle = angle - 360
+        
+        return angle
+    
 def main(args=None):
     # initialize the ROS communication
     rclpy.init(args=args)

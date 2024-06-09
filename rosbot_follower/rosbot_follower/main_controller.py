@@ -24,7 +24,7 @@ class MainController(Node):
 
         #subscribers
         self.camera_sub = self.create_subscription(Float64, 'follow/camera_angle', self.camera_callback, 10)
-        # self.lidar_sub = self.create_subscription(Float64, 'follow/lidar_angle', self.lidar_callback, 10)
+        self.lidar_sub = self.create_subscription(Float64, 'follow/lidar_angle', self.lidar_callback, 10)
         self.scan_sub = self.create_subscription(LaserScan, '/scan', self.scan_callback, 10) #change scan to follow/scan later
 
         #publishers
