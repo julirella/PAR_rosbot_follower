@@ -26,32 +26,33 @@ class LidarTrack(Node):
                 10
         )
         self.angular_offset_pub = self.create_publisher(Float64, '/follow/lidar_angle', 10)
-        self.runs = 20
+        #self.runs = 20
         self.do_compute = True
         self.to_print = True
     
-    # To get a reading run file and then in another terminal publish below
-    # ros2 topic pub -1 /reading std_msgs/msg/Bool "data: true"
-
+    # Currently compute set to always true, this method allows us
+    # in future to toggle lidar processing (when out of camera)
     def compute(self, data):
         if data:
             self.do_compute = True
 
     def laser_callback(self,msg):
+        
         #self.runs -= 1
 
         if self.do_compute:
             self.find_edges(msg.ranges)
             self.get_logger().info(f"Scan processed")
-            
+
+        # Use logic if you want to test lidar for x amount of scans and then stop    
         #if self.runs <= 0:
         #    self.do_compute = False
+
 
     def find_edges(self, ranges):
         first_edge = None
         last_edge = None
         count = 0
-        range_thresh = 0.02
         count_thresh = 3
 
         for index, range in enumerate(ranges):
@@ -60,47 +61,50 @@ class LidarTrack(Node):
                 first_edge = (index, range)
                 last_edge = (index, range)
                 #print(f"{index/2}: {range} - FIRST")   
+
             # if difference between edges is small enough
             elif first_edge and self.within_threshold(last_edge[1], range):
                 last_edge = (index, range)
                 count = 0
                 #print(f"{index/2}: {range} - ADD")
+
             # If non candidate add to count
             elif first_edge and count < count_thresh:
                 count += 1
                 #print(f"{index/2}: {range} - COUNT: {count}") 
+           
             # if too many consecutive non candidates 
             elif count >= count_thresh: 
                 #print("RESET")
                 self.check_object(first_edge, last_edge, ranges)
                 first_edge = None
                 count = 0
+            
             #else:
                 #print(f"{index/2}: {range} - SKIP")
     
     def check_object(self, first_edge, last_edge, ranges):
-        found = False
         basic_checks = False
         object_width = abs(first_edge[0] - last_edge[0])
+        
+        # Avoids checking for objects too small or large
         sensible_edges = 6 <= object_width <= 60
 
         middle_index = round(max(first_edge[0], last_edge[0]) - abs(first_edge[0] - last_edge[0])/2)
         
-        if ranges[middle_index] != float('inf'):
+        if sensible_edges and ranges[middle_index] != float('inf'):
             basic_checks = self.basic_checks(first_edge, last_edge, middle_index, ranges)
-        elif ranges[middle_index + 1] != float('inf'):
+        elif sensible_edges and ranges[middle_index + 1] != float('inf'):
             basic_checks = self.basic_checks(first_edge, last_edge, middle_index + 1, ranges)
-        elif ranges[middle_index - 1] != float('inf'):
+        elif sensible_edges and ranges[middle_index - 1] != float('inf'):
             basic_checks = self.basic_checks(first_edge, last_edge, middle_index - 1, ranges)
 
         #print(f"Sensible_edges: {object_width}")
 
         if sensible_edges and basic_checks:
-            found = True
             #print(f"CHECK THIS OBJECT: ({first_edge[0]/2},{first_edge[1]}, ({last_edge[0]/2},{last_edge[1]})")
             self.calculate_radius(first_edge, last_edge, middle_index)
         
-        return found
 
     def basic_checks(self, first_edge, last_edge, middle_index, ranges):
         
