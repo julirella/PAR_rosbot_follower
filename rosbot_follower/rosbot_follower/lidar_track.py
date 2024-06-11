@@ -13,7 +13,7 @@ class LidarTrack(Node):
 
     def __init__(self):
         super().__init__('lidar_track')
-        self.laser_subscriber = self.create_subscription(
+        self.laser_publisher = self.create_publisher(
                 LaserScan, 
                 '/follow/scan_repeat', 
                 QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE)
@@ -60,7 +60,8 @@ class LidarTrack(Node):
         if self.do_compute:
             self.find_edges(msg.ranges)
             self.get_logger().info(f"Scan processed")
-
+            
+        self.laser_publisher.publish(msg)
         # Use logic if you want to test lidar for x amount of scans and then stop    
         #if self.runs <= 0:
         #    self.do_compute = False
