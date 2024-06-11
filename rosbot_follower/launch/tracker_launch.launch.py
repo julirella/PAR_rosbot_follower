@@ -5,14 +5,14 @@ from launch_ros.actions import Node
 def generate_launch_description():
 
     ld = LaunchDescription()
-    # camera_track node *******************************************************************************
-    node = Node(
-        package='rosbot_follower',
-        executable='camera_track',
-        name='camera_track',
-        output='screen',
-    )
-    ld.add_action(node)
+    # # camera_track node *******************************************************************************
+    # node = Node(
+    #     package='rosbot_follower',
+    #     executable='camera_track',
+    #     name='camera_track',
+    #     output='screen',
+    # )
+    # ld.add_action(node)
 
     # main controller node **********************************************************************************
     node = Node(

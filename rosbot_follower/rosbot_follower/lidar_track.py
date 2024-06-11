@@ -15,6 +15,11 @@ class LidarTrack(Node):
         super().__init__('lidar_track')
         self.laser_subscriber = self.create_subscription(
                 LaserScan, 
+                '/follow/scan_repeat', 
+                QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE)
+        )
+        self.laser_subscriber = self.create_subscription(
+                LaserScan, 
                 '/follow/scan', 
                 self.laser_callback, 
                 QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE)
