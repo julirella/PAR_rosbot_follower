@@ -154,8 +154,7 @@ class LidarTrack(Node):
         #print(f"RADIUS: {radius}")
         if 0.07 < radius < 0.1:
             #print(f"CANDIDATE")
-            print("")
-            #self.publish_angle(middle_index)
+            self.publish_angle(middle_index)
 
     def within_threshold(self, last_range, range):
         within = False
