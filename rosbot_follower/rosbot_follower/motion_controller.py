@@ -35,7 +35,13 @@ class MotionController(Node):
         self.cmd_publisher_ = self.create_publisher(Twist, 'cmd_vel', 10)
 
         # create subscribers       
-        self.laser_subscriber = self.create_subscription(LaserScan, '/scan', self.laser_callback, QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE))
+        self.laser_subscriber = self.create_subscription(
+            LaserScan, 
+            'follow/scan', 
+            self.laser_callback, 
+            QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE)
+        )
+        # Topic is published in Navigator
         self.angular_speed_sub = self.create_subscription(Float64, 'follow/angular_speed', self.angular_speed_callback, 10)
        
         # laser scan variables
@@ -66,6 +72,7 @@ class MotionController(Node):
 
         return sections
     
+    # Set forward speed based on latest laser scan
     def laser_callback(self,msg):
         sections = self.divide_sections(msg)
         front_dst = sections['front']
@@ -77,28 +84,40 @@ class MotionController(Node):
             self.cmd.linear.x = LINEAR_GAIN*(front_dst - DESIRED_DIST)
             # self.get_logger().info(f"ready to go, linear velocity: {self.cmd.linear.x}")
 
-    # Currently unused, may be used to improve collision avoidance
-    def fr_callback(self, msg):
-        self.fr_dst = msg.range
-
-    # Currently unused, may be used to improve collision avoidance
-    def fl_callback(self, msg):
-        self.fl_dst = msg.range
-        avg_dst = (self.fr_dst + self.fl_dst) / 2
-
-        if avg_dst < DESIRED_DIST:
-            self.cmd.linear.x = LINEAR_GAIN*(avg_dst - DESIRED_DIST)
-        else:
-            self.cmd.linear.x = 0
-        
-        self.cmd_publisher_.publish(self.cmd)
-
+    # Publishes to cmd_vel using latest angular and laser data (see laser_callback)
     def angular_speed_callback(self, msg):
+        THRESHOLD = 0.45
         ang_vel = msg.data
+
+        # Reduce forward gain as the angle increases (above threshold)
+        pos_ang = abs(ang_vel)
+        if pos_ang > THRESHOLD:
+            scalar = (pos_ang - THRESHOLD)*2
+            linear_velocity = self.cmd.linear.x - (self.cmd.linear.x*scalar)
+            self.get_logger().info(f"Above threshold, linear velocity: {linear_velocity}, reduced from {self.cmd.linear.x}")
+            self.cmd.linear.x = linear_velocity
+
+  
         self.cmd.angular.z = ang_vel
         # self.get_logger().info(f"publishing cmd_vel: {self.cmd}")
         self.cmd_publisher_.publish(self.cmd)
-            
+
+        # Currently unused, may be used to improve collision avoidance
+    # def fr_callback(self, msg):
+    #     self.fr_dst = msg.range
+
+    # # Currently unused, may be used to improve collision avoidance
+    # def fl_callback(self, msg):
+    #     self.fl_dst = msg.range
+    #     avg_dst = (self.fr_dst + self.fl_dst) / 2
+
+    #     if avg_dst < DESIRED_DIST:
+    #         self.cmd.linear.x = LINEAR_GAIN*(avg_dst - DESIRED_DIST)
+    #     else:
+    #         self.cmd.linear.x = 0
+        
+    #     self.cmd_publisher_.publish(self.cmd)
+
 def main(args=None):
     # initialize the ROS communication
     rclpy.init(args=args)
