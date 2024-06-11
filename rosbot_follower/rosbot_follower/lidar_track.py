@@ -15,7 +15,7 @@ class LidarTrack(Node):
         super().__init__('lidar_track')
         self.laser_subscriber = self.create_subscription(
                 LaserScan, 
-                '/scan', 
+                '/follow/scan', 
                 self.laser_callback, 
                 QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE)
         )
@@ -25,7 +25,12 @@ class LidarTrack(Node):
                 self.compute,
                 10
         )
-        self.angular_offset_pub = self.create_publisher(Float64, '/follow/lidar_angle', 10)
+        self.angular_offset_pub = self.create_publisher(
+                Float64, 
+                '/follow/lidar_angle', 
+                10
+        )
+
         #self.runs = 20
         self.do_compute = True
         self.to_print = True
@@ -149,7 +154,8 @@ class LidarTrack(Node):
         #print(f"RADIUS: {radius}")
         if 0.07 < radius < 0.1:
             #print(f"CANDIDATE")
-            self.publish_angle(middle_index)
+            print("")
+            #self.publish_angle(middle_index)
 
     def within_threshold(self, last_range, range):
         within = False

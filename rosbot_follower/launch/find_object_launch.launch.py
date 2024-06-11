@@ -87,11 +87,11 @@ def generate_launch_description():
     )
     ld.add_action(node)
 
-    # tracker node *******************************************************************************
+    # camera_track node *******************************************************************************
     # node = Node(
     #     package='rosbot_follower',
-    #     executable='tracker',
-    #     name='tracker',
+    #     executable='camera_track',
+    #     name='camera_track',
     #     output='screen',
     # )
     # ld.add_action(node)

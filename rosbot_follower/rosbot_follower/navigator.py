@@ -18,7 +18,7 @@ import tf2_ros
 CAMERA_WIDTH = 640
 ANGULAR_GAIN = 0.01
 MIN_ANG_VEL = 0.15
-MAX_ANG_VEL = 0.5
+MAX_ANG_VEL = 1.8
 DESIRED_DIST = 0.6
 MIN_LIN_VEL  = 0.05
 MAX_LIN_VEL  = 0.4
@@ -31,10 +31,10 @@ class Navigator(Node):
         # call the class constructor
         super().__init__('navigator')
 
-        # create the publisher object
+        # create the publisher object, motion_controller is the sole subscriber
         self.angular_speed_publisher = self.create_publisher(Float64, 'follow/angular_speed', 10)
 
-        # create subscribers       
+        # create subscriber, main controller is the sole publisher       
         self.anglular_offset_subscriber = self.create_subscription(Float64, '/follow/main_angle', self.angular_move_callback, 10)
     
         self.get_logger().info("***************navigator launched********************")

@@ -17,10 +17,10 @@ import cv2
 CAMERA_FIELD_OF_VIEW = 63.3 #still not sure about this one
 IMAGE_WIDTH = 640
 
-class Tracker(Node):
+class CameraTrack(Node):
 
     def __init__(self):
-        super().__init__('mapper')
+        super().__init__('camera_track')
         self.reentrant_group_1 = ReentrantCallbackGroup()
 
         #subscribers
@@ -30,7 +30,7 @@ class Tracker(Node):
         # Publishers
         self.angular_offset_pub = self.create_publisher(Float64, '/follow/camera_angle', 10)
 
-        self.get_logger().info("***************tracker launched********************")
+        self.get_logger().info("***************camera_track launched********************")
 
 
 
@@ -80,7 +80,7 @@ class Tracker(Node):
         msg = Float64()
         msg.data = float(angle)
         
-        # self.get_logger().info(f"tracker sending camera angle {msg}")
+        # self.get_logger().info(f"camera_track sending camera angle {msg}")
         self.angular_offset_pub.publish(msg)
         
     def object_callback(self, object_msg):
@@ -97,12 +97,12 @@ class Tracker(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    tracker = Tracker()
+    camera_track = CameraTrack()
     executor = MultiThreadedExecutor(num_threads=2)
-    executor.add_node(tracker)
+    executor.add_node(camera_track)
 
     try:
         executor.spin()
     finally:
-        tracker.destroy_node()
+        camera_track.destroy_node()
         rclpy.shutdown()

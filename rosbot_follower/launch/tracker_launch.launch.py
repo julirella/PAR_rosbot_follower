@@ -5,11 +5,11 @@ from launch_ros.actions import Node
 def generate_launch_description():
 
     ld = LaunchDescription()
-    # tracker node *******************************************************************************
+    # camera_track node *******************************************************************************
     node = Node(
         package='rosbot_follower',
-        executable='tracker',
-        name='tracker',
+        executable='camera_track',
+        name='camera_track',
         output='screen',
     )
     ld.add_action(node)
@@ -50,13 +50,13 @@ def generate_launch_description():
     )
     ld.add_action(node)
 
-    #node = Node(
-    #    package='rosbot_follower',
-    #    executable='lidar_logger',
-    #    name='lidar_logger',
-    #    output='screen',
-    #)
-    #ld.add_action(node)
+    node = Node(
+       package='rosbot_follower',
+       executable='lidar_repeater',
+       name='lidar_repeater',
+       output='screen',
+    )
+    ld.add_action(node)
 
     node = Node(
         package='rosbot_follower',

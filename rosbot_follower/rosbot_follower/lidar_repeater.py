@@ -6,11 +6,24 @@ from sensor_msgs.msg import LaserScan
 from rclpy.qos import ReliabilityPolicy, QoSProfile
 from std_msgs.msg import Bool
 
-class LidarLogger(Node):
+class LidarRepeater(Node):
 
     def __init__(self):
-        super().__init__('lidar_logger')
-        self.laser_subscriber = self.create_subscription(LaserScan, '/scan', self.laser_callback, QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE))
+        super().__init__('lidar_repeater')
+
+        self.laser_publisher = self.create_publisher(
+                LaserScan, 
+                'follow/scan', 
+                QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE)
+        )
+
+        self.laser_subscriber = self.create_subscription(
+                LaserScan, 
+                '/scan', 
+                self.laser_callback, 
+                QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE)
+        )
+
         self.follow_subscriber = self.create_subscription(
                 Bool,
                 '/reading',
@@ -19,7 +32,7 @@ class LidarLogger(Node):
         )
         self.scan = None
 
-        self.get_logger().info("***************lidar logger launched********************")
+        self.get_logger().info("***************lidar repeater launched********************")
     
     # To get a reading run file and then in another terminal publish below
     # ros2 topic pub -1 /reading std_msgs/msg/Bool "data: true"
@@ -33,18 +46,19 @@ class LidarLogger(Node):
                self.get_logger().info(f'{reading/2}: {msg.ranges[reading]}')
 
     def laser_callback(self,msg):
-        if msg:
-            self.scan = msg
+        self.scan = msg
+        # Publish to repeater topic
+        self.laser_publisher.publish(msg)
 
 def main(args=None):
     # initialize the ROS communication
     rclpy.init(args=args)
     # declare the node constructor
-    lidar_logger = LidarLogger()       
+    lidar_repeater = LidarRepeater()       
     # pause the program execution, waits for a request to kill the node (ctrl+c)
-    rclpy.spin(lidar_logger)
+    rclpy.spin(lidar_repeater)
     # Explicity destroy the node
-    lidar_logger.destroy_node()
+    lidar_repeater.destroy_node()
     # shutdown the ROS communication
     rclpy.shutdown()
 
