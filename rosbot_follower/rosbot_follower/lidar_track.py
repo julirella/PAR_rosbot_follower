@@ -59,7 +59,7 @@ class LidarTrack(Node):
 
         if self.do_compute:
             self.find_edges(msg.ranges)
-            self.get_logger().info(f"Scan processed")
+            # self.get_logger().info(f"Scan processed")
             
         self.laser_publisher.publish(msg)
         # Use logic if you want to test lidar for x amount of scans and then stop    
@@ -175,7 +175,7 @@ class LidarTrack(Node):
         msg = Float64()
         msg.data = self.bound_angle(index)
         
-        self.get_logger().info(f"Angle sent: {msg}")
+        # self.get_logger().info(f"Angle sent: {msg}")
         self.angular_offset_pub.publish(msg)
 
     def bound_angle(self, index):

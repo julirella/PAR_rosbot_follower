@@ -106,6 +106,8 @@ class MotionController(Node):
         # self.cmd_publisher_.publish(self.cmd)
 
     def linear_vel_controller(self):
+        # self.get_logger().info(f"laser forward: {self.laser_forward}\n angular_vel: {self.ang_vel}")
+
         self.cmd.angular.z = self.ang_vel
         
         THRESHOLD = 0.45
@@ -119,11 +121,14 @@ class MotionController(Node):
                 scalar = (pos_ang - THRESHOLD)*2
                 linear_velocity = self.cmd.linear.x - (self.cmd.linear.x*scalar)
                 # self.get_logger().info(f"Above threshold, linear velocity: {linear_velocity}, reduced from {self.cmd.linear.x}")
-                self.cmd.linear.x = linear_velocity
+                if linear_velocity < 0.0: #we never want to reverse
+                    self.cmd.linear.x = 0.0
+                else:
+                    self.cmd.linear.x = linear_velocity
         else:
             self.cmd.linear.x = 0.0
         
-        self.get_logger().info(f"publishing velocity lin: {self.cmd.linear.x}, ang: {self.cmd.angular.z}")
+        # self.get_logger().info(f"publishing velocity lin: {self.cmd.linear.x}, ang: {self.cmd.angular.z}")
         self.cmd_publisher_.publish(self.cmd)
 
     # def fr_callback(self, msg):
