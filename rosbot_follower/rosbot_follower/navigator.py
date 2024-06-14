@@ -33,9 +33,11 @@ class Navigator(Node):
 
         # create the publisher object, motion_controller is the sole subscriber
         self.angular_speed_publisher = self.create_publisher(Float64, 'follow/angular_speed', 10)
+        self.move_pub = self.create_publisher(Bool, 'follow/motion_move', 10)
 
         # create subscriber, main controller is the sole publisher       
         self.anglular_offset_subscriber = self.create_subscription(Float64, '/follow/main_angle', self.angular_move_callback, 10)
+        self.move_sub = self.create_subscription(Bool, 'follow/nav_move', self.move_callback, 10)
     
         self.get_logger().info("***************navigator launched********************")
 
@@ -50,6 +52,12 @@ class Navigator(Node):
         msg.data = ang_vel
         # self.get_logger().info(f"publishing angular speed: {msg}")
         self.angular_speed_publisher.publish(msg)
+
+    def move_callback(self, msg):
+        self.get_logger().info(f"forwarding move")
+
+        self.move_pub.publish(msg)
+
             
 def main(args=None):
     # initialize the ROS communication

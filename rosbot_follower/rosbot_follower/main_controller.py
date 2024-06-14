@@ -3,7 +3,7 @@ from rclpy import duration
 import rclpy.time
 from rclpy.node import Node
 
-from std_msgs.msg import Float64
+from std_msgs.msg import Float64, Bool
 from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Pose
 from visualization_msgs.msg import Marker, MarkerArray
@@ -29,11 +29,14 @@ class MainController(Node):
 
         #publishers
         self.angle_pub = self.create_publisher(Float64, 'follow/main_angle', 10)
+        self.move_pub = self.create_publisher(Bool, 'follow/nav_move', 10)
         self.hazard_pub = self.create_publisher(Marker, '/hazards', 10)
         self.hazard_array_pub = self.create_publisher(MarkerArray, '/hazards_array', 10)
 
         
-        self.lastCamReading = rclpy.time.Time()
+        self.lastCamReading = self.get_clock().now()
+        self.lastLidarReading = self.get_clock().now()
+
         self.waypoints = deque(maxlen=WAYPOINT_COUNT)
         self.laser_scan = LaserScan()
         self.angle = 0
@@ -52,17 +55,19 @@ class MainController(Node):
         self.laser_scan = msg
     
     def camera_callback(self, msg):
-        # self.get_logger().info(f"main controller receiving camera angle and sending it on")
         self.angle = msg.data
         self.angle_pub.publish(msg)
         self.lastCamReading = self.get_clock().now()
+        self.get_logger().info(f"cam angle at {self.lastCamReading}\nangle: {msg.data}")
 
     def lidar_callback(self, msg):
-        #timeSinceCam = self.get_clock().now() - self.lastCamReading
-        #if timeSinceCam > duration.Duration(seconds=0.5):
-        #    self.get_logger().info(f"camera angle timed out, time since last msg: {timeSinceCam}")
-        self.angle_pub.publish(msg)        
-    
+        timeSinceCam = self.get_clock().now() - self.lastCamReading
+        self.get_logger().info(f"lidar data recieved")
+        if timeSinceCam.nanoseconds > duration.Duration(seconds=0.5).nanoseconds:
+            self.get_logger().info(f"camera angle timed out, time since last msg: {timeSinceCam}\nangle: {msg.data}")
+            self.angle_pub.publish(msg)        
+        self.lastLidarReading = self.get_clock().now()
+
     def get_distance_from_laser_scan(self, ranges, angle):
         index = int(angle)*2
         distance = ranges[index]
@@ -147,6 +152,8 @@ class MainController(Node):
     
     def save_waypoints(self):
         self.get_logger().info("------------------------------waypoint thread running-----------------------------------------")
+        max_timeout = duration.Duration(seconds=5.0).nanoseconds
+        
         while True:
             ranges = self.laser_scan.ranges #replace with getting ranges at specific time stamp
             angle = self.angle
@@ -162,9 +169,30 @@ class MainController(Node):
                 # self.get_logger().info(f"\nWAYPOINT:\ndistance calculated:{dist}\npose: x: {pose.position.x} y: {pose.position.y}\nmap pose: x: {map_pose.position.x} y: {map_pose.position.y}")
                 # self.publish_marker_pos(map_pose)
                 self.publish_hazard_array()
-                time.sleep(1)
+            
+            interval = 0
+            while interval < 1:
+                timeSinceCam = self.get_clock().now() - self.lastCamReading
+                timeSinceLidar = self.get_clock().now() - self.lastLidarReading
+                if timeSinceCam.nanoseconds > max_timeout and timeSinceLidar.nanoseconds > max_timeout:
+                    self.get_logger().info(f"both timed out\ntime since last cam: {timeSinceCam}\ntime since last lidar{timeSinceLidar}")
+                    self.predict_waypoint()
+                sleepTime = 0.5
+                interval += sleepTime
+                time.sleep(sleepTime)     
+
+    def predict_waypoint(self):
+        msg = Bool()
+        msg.data = False
+        self.move_pub.publish(msg)
+        self.get_logger().info("calling nav2-----------------------------------------------------------------")
+
+        time.sleep(10) #later replace with prediction and waiting for nav2 to finish
         
-    
+        self.get_logger().info("finished with nav2-----------------------------------------------------------")
+        msg.data = True
+        self.move_pub.publish(msg)
+        
 
 def main(args=None):
     # initialize the ROS communication
