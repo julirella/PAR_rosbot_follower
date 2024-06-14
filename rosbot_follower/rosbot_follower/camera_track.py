@@ -87,11 +87,11 @@ class CameraTrack(Node):
         
         data = object_msg.data
         timeStamp = self.get_clock().now()
-        round = round(timeStamp.sec + timeStamp.nanosec/1000000000, 1) 
+        round_time = round(timeStamp.seconds_nanoseconds()[0] + timeStamp.seconds_nanoseconds()[1]/1000000000, 1) 
 
         if len(data) > 0:
-            self.calculate_angle_from_object(data, round)
-            self.get_logger().info(f"object recognised with time {round}")
+            self.calculate_angle_from_object(data, round_time)
+            self.get_logger().info(f"object recognised with time {round_time}")
         else:
             # self.get_logger().info(f"NO object recognised")
             ...
