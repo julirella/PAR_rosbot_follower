@@ -123,7 +123,7 @@ class MotionController(Node):
         else:
             self.cmd.linear.x = 0.0
         
-        self.get_logger().info(f"publishing velocity lin: {self.cmd.linear.x}, ang: {self.cmd.angular.z}")
+        #self.get_logger().info(f"publishing velocity lin: {self.cmd.linear.x}, ang: {self.cmd.angular.z}")
         self.cmd_publisher_.publish(self.cmd)
 
     # def fr_callback(self, msg):
