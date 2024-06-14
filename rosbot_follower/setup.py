@@ -23,10 +23,14 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            f"tracker = {package_name}.tracker:main",
+            f"camera_track = {package_name}.camera_track:main",
             f"waypoint = {package_name}.waypoint:main",
-            f"lidar_logger = {package_name}.lidar_logger:main",
+            f"lidar_repeater = {package_name}.lidar_repeater:main",
+            f"lidar_track = {package_name}.lidar_track:main",
             f"follow = {package_name}.follow:main",
+            f"main_controller = {package_name}.main_controller:main",
+            f"navigator = {package_name}.navigator:main",
+            f"motion_controller = {package_name}.motion_controller:main",
         ],
     },
 )
