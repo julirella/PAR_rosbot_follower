@@ -84,6 +84,7 @@ class MainController(Node):
     def publish_angle(self, msg):
         TIME, ANGLE = 0, 1
         self.angle = (msg.data[TIME], msg.data[ANGLE])
+        self.angle_pub.publish(msg.data[ANGLE])
 
     def get_distance_from_laser_scan(self, ranges, angle):
         index = int(angle)*2

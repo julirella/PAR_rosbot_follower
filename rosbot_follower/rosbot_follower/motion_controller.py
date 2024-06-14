@@ -115,22 +115,24 @@ class MotionController(Node):
         self.cmd_publisher_.publish(self.cmd)
 
     def linear_vel_controller(self):
-        # self.get_logger().info(f"laser forward: {self.laser_forward}\n angular_vel: {self.ang_vel}")
+        self.get_logger().info(f"laser forward: {self.laser_forward}\n angular_vel: {self.ang_vel}")
 
         if self.go == True:
             self.cmd.angular.z = self.ang_vel
+            self.get_logger().info(f"go")
             
             THRESHOLD = 0.45
             pos_ang = abs(self.ang_vel)
             if self.first == True and self.laser_forward > DESIRED_DIST and pos_ang < 0.8:
                 self.cmd.linear.x = LINEAR_GAIN*(self.laser_forward - DESIRED_DIST) #maybe
+                self.get_logger().info(f"first {self.cmd.linear.x}")
 
             # Reduce forward gain as the angle increases (above threshold)
                 if pos_ang > THRESHOLD:
                     # 1.60 - 0.45 =1.15*2 = 2.3
                     scalar = (pos_ang - THRESHOLD)*2
                     linear_velocity = self.cmd.linear.x - (self.cmd.linear.x*scalar)
-                    # self.get_logger().info(f"Above threshold, linear velocity: {linear_velocity}, reduced from {self.cmd.linear.x}")
+                    self.get_logger().info(f"Above threshold, linear velocity: {linear_velocity}, reduced from {self.cmd.linear.x}")
                     if linear_velocity < 0.0: #we never want to reverse
                         self.cmd.linear.x = 0.0
                     else:
