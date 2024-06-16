@@ -57,7 +57,7 @@ class MotionController(Node):
         self.ang_vel = 0.0
         
         # flags
-        self.go = False
+        self.go = True
         self.first = False
 
         # create a Twist message

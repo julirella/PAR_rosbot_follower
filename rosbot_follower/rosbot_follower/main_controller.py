@@ -70,13 +70,13 @@ class MainController(Node):
         # self.get_logger().info(f"main controller receiving camera angle and sending it on")
         self.publish_angle(msg)
         self.lastCamReading = self.get_clock().now()
-        self.get_logger().info(f"cam angle at {self.lastCamReading}\nangle: {msg.data}")
+        #self.get_logger().info(f"cam angle at {self.lastCamReading}\nangle: {msg.data}")
 
     def lidar_callback(self, msg):
         timeSinceCam = self.get_clock().now() - self.lastCamReading
-        self.get_logger().info(f"lidar data recieved")
+        #self.get_logger().info(f"lidar data recieved")
         if timeSinceCam.nanoseconds > duration.Duration(seconds=0.5).nanoseconds:
-            self.get_logger().info(f"camera angle timed out, time since last msg: {timeSinceCam}\nangle: {msg.data[1]}")
+            self.get_logger().info(f"camera angle timed out, time since last msg: {timeSinceCam.nanoseconds}\nangle: {msg.data[1]}")
             self.publish_angle(msg)
    
         self.lastLidarReading = self.get_clock().now()

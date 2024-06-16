@@ -9,6 +9,7 @@ from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseWithCovariance
 from rclpy.qos import ReliabilityPolicy, QoSProfile
 from std_msgs.msg import Bool, Float64
+from rclpy import duration
 import numpy as np
 
 import geometry_msgs.msg
@@ -40,6 +41,7 @@ class Navigator(Node):
         self.move_sub = self.create_subscription(Bool, 'follow/nav_move', self.move_callback, 10)
     
         self.get_logger().info("***************navigator launched********************")
+        self.last_move = self.get_clock().now()
 
     def angular_move_callback(self, msg):
         # self.get_logger().info(f"follow recieving angle {msg}")
@@ -51,10 +53,14 @@ class Navigator(Node):
         msg = Float64()
         msg.data = ang_vel
         # self.get_logger().info(f"publishing angular speed: {msg}")
-        self.angular_speed_publisher.publish(msg)
+        timeSinceMove = self.get_clock().now() - self.last_move
+        #self.get_logger().info(f"lidar data recieved")
+        if timeSinceMove.nanoseconds > duration.Duration(seconds=0.2).nanoseconds:
+            self.angular_speed_publisher.publish(msg)
+            self.last_move = self.get_clock().now()
 
     def move_callback(self, msg):
-        self.get_logger().info(f"forwarding move")
+        #self.get_logger().info(f"forwarding move")
 
         self.move_pub.publish(msg)
 
