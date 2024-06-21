@@ -5,7 +5,7 @@ from rclpy.node import Node
 
 from std_msgs.msg import Float64, Float64MultiArray, Bool
 from sensor_msgs.msg import LaserScan
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import Pose, PoseStamped
 from visualization_msgs.msg import Marker, MarkerArray
 
 import tf2_ros
@@ -28,13 +28,14 @@ class MainController(Node):
         self.camera_sub = self.create_subscription(Float64MultiArray, 'follow/camera_angle', self.camera_callback, 10)
         self.lidar_sub = self.create_subscription(Float64MultiArray, 'follow/lidar_angle', self.lidar_callback, 10)
         self.scan_sub = self.create_subscription(LaserScan, '/follow/scan_repeat', self.scan_callback, 10) #change scan to follow/scan later
+        self.follow_subscriber = self.create_subscription(Bool,'/waypoint',self.waypoint_start,10)
 
         #publishers
         self.angle_pub = self.create_publisher(Float64, 'follow/main_angle', 10)
         self.move_pub = self.create_publisher(Bool, 'follow/nav_move', 10)
         self.hazard_pub = self.create_publisher(Marker, '/hazards', 10)
         self.hazard_array_pub = self.create_publisher(MarkerArray, '/hazards_array', 10)
-
+        self.waypoint_pub = self.create_publisher(PoseStamped, '/follow/pose', 10)
         
         self.lastCamReading = self.get_clock().now()
         self.lastLidarReading = self.get_clock().now()
@@ -218,6 +219,39 @@ class MainController(Node):
         msg.data = True
         self.move_pub.publish(msg)
         
+    def waypoint_start(self, data):
+        if len(self.waypoints) >= 2 and data:
+            self.predict_position()
+        else:
+            self.get_logger().info("***************not enough point********************")
+ 
+    def predict_position(self):
+        self.get_logger().info("***************waypoint called********************")
+        last_pose = self.waypoints[-1]
+        second_last_pose = self.waypoints[-2]
+        x0 = last_pose.position.x
+        y0 = last_pose.position.y
+ 
+        x1 = second_last_pose.position.x
+        y1 = second_last_pose.position.y
+ 
+        delta_x = (x1 - x0)
+        delta_y = (y1 - y0)
+ 
+        prediction = PoseStamped()
+        prediction.header.frame_id = 'map'
+        prediction.pose.position.x = last_pose.position.x + delta_x
+        prediction.pose.position.y = last_pose.position.y + delta_y
+        prediction.pose.position.z = 0.0
+ 
+        # prediction.pose.orientation = last_pose.pose.orientation
+ 
+        self.waypoint_pub.publish(prediction)
+        self.get_logger().info(f'Published predicted position: {prediction.pose.position.x}, {prediction.pose.position.y}')
+        # tan_theta = abs(delta_y / delta_x)
+ 
+        self.waypoint_pub.publish(prediction)
+
 
 def main(args=None):
     # initialize the ROS communication
