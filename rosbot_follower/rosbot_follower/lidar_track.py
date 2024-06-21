@@ -4,7 +4,7 @@ from rclpy.node import Node
 # import the LaserScan module from sensor_msgs interface
 from sensor_msgs.msg import LaserScan
 from rclpy.qos import ReliabilityPolicy, QoSProfile
-from std_msgs.msg import Float64
+from std_msgs.msg import Float64, Float64MultiArray
 from std_msgs.msg import Bool
 
 from math import sin, radians
@@ -31,7 +31,7 @@ class LidarTrack(Node):
                 10
         )
         self.angular_offset_pub = self.create_publisher(
-                Float64, 
+                Float64MultiArray, 
                 '/follow/lidar_angle', 
                 10
         )
@@ -58,8 +58,11 @@ class LidarTrack(Node):
         #self.runs -= 1
 
         if self.do_compute:
-            self.find_edges(msg.ranges)
-            self.get_logger().info(f"Scan processed")
+            timeStamp = msg.header.stamp
+            # Round to single decimal place for uniformity
+            roundTime = round(timeStamp.sec + timeStamp.nanosec/1000000000, 1) 
+            self.find_edges(msg.ranges, roundTime)
+            #self.get_logger().info(f"Scan processed")
             
         self.laser_publisher.publish(msg)
         # Use logic if you want to test lidar for x amount of scans and then stop    
@@ -67,7 +70,7 @@ class LidarTrack(Node):
         #    self.do_compute = False
 
 
-    def find_edges(self, ranges):
+    def find_edges(self, ranges, roundTime):
         first_edge = None
         last_edge = None
         count = 0
@@ -94,14 +97,14 @@ class LidarTrack(Node):
             # if too many consecutive non candidates 
             elif count >= count_thresh: 
                 #print("RESET")
-                self.check_object(first_edge, last_edge, ranges)
+                self.check_object(first_edge, last_edge, ranges, roundTime)
                 first_edge = None
                 count = 0
             
             #else:
                 #print(f"{index/2}: {range} - SKIP")
     
-    def check_object(self, first_edge, last_edge, ranges):
+    def check_object(self, first_edge, last_edge, ranges, roundTime):
         basic_checks = False
         object_width = abs(first_edge[0] - last_edge[0])
         
@@ -121,7 +124,7 @@ class LidarTrack(Node):
 
         if sensible_edges and basic_checks:
             #print(f"CHECK THIS OBJECT: ({first_edge[0]/2},{first_edge[1]}, ({last_edge[0]/2},{last_edge[1]})")
-            self.calculate_radius(first_edge, last_edge, middle_index)
+            self.calculate_radius(first_edge, last_edge, middle_index, roundTime)
         
 
     def basic_checks(self, first_edge, last_edge, middle_index, ranges):
@@ -151,7 +154,7 @@ class LidarTrack(Node):
         #print(f"cee: {compare_edge_edge} {abs(first_edge[1] - last_edge[1])} < {difference_thresh}")        
         return possibly_circular
     
-    def calculate_radius(self, first_edge, last_edge, middle_index):
+    def calculate_radius(self, first_edge, last_edge, middle_index, roundTime):
         angle = radians(abs(first_edge[0]/2 - last_edge[0]/2))
         hypotenuse = max(first_edge[1], last_edge[1])
         radius = sin(angle/2)*hypotenuse
@@ -160,7 +163,7 @@ class LidarTrack(Node):
         #print(f"RADIUS: {radius}")
         if 0.07 < radius < 0.1:
             #print(f"CANDIDATE")
-            self.publish_angle(middle_index)
+            self.publish_angle(middle_index, roundTime)
 
     def within_threshold(self, last_range, range):
         within = False
@@ -171,11 +174,11 @@ class LidarTrack(Node):
         
         return within
 
-    def publish_angle(self, index):
-        msg = Float64()
-        msg.data = self.bound_angle(index)
+    def publish_angle(self, index, roundTime):
+        msg = Float64MultiArray()
+        msg.data = [roundTime, self.bound_angle(index)]
         
-        self.get_logger().info(f"Angle sent: {msg}")
+        # self.get_logger().info(f"Angle sent: {msg}")
         self.angular_offset_pub.publish(msg)
 
     def bound_angle(self, index):

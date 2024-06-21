@@ -5,7 +5,7 @@ from rclpy.node import Node
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 
-from std_msgs.msg import Float32MultiArray, Float64
+from std_msgs.msg import Float32MultiArray, Float64, Float64MultiArray
 from geometry_msgs.msg import PoseStamped
 import tf2_geometry_msgs
 
@@ -28,7 +28,7 @@ class CameraTrack(Node):
             10, callback_group=self.reentrant_group_1)
         
         # Publishers
-        self.angular_offset_pub = self.create_publisher(Float64, '/follow/camera_angle', 10)
+        self.angular_offset_pub = self.create_publisher(Float64MultiArray, '/follow/camera_angle', 10)
 
         self.get_logger().info("***************camera_track launched********************")
 
@@ -70,15 +70,15 @@ class CameraTrack(Node):
         # self.get_logger().info(f"angle (deg): {angle}")
         return angle
     
-    def calculate_angle_from_object(self, object_msg_data):
+    def calculate_angle_from_object(self, object_msg_data, timestep):
 
         dst_pts = self.dst_points(object_msg_data) 
 
         #in image coordinates
         centre_x, _ = self.get_centre_index(dst_pts)
         angle = self.angle_from_image_index(centre_x)
-        msg = Float64()
-        msg.data = float(angle)
+        msg = Float64MultiArray()
+        msg.data = [timestep, float(angle)]
         
         # self.get_logger().info(f"camera_track sending camera angle {msg}")
         self.angular_offset_pub.publish(msg)
@@ -86,9 +86,12 @@ class CameraTrack(Node):
     def object_callback(self, object_msg):
         
         data = object_msg.data
+        timeStamp = self.get_clock().now()
+        round_time = round(timeStamp.seconds_nanoseconds()[0] + timeStamp.seconds_nanoseconds()[1]/1000000000, 1) 
+
         if len(data) > 0:
-            self.calculate_angle_from_object(data)
-            # self.get_logger().info(f"object recognised")
+            self.calculate_angle_from_object(data, round_time)
+            self.get_logger().info(f"object recognised with time {round_time}")
         else:
             # self.get_logger().info(f"NO object recognised")
             ...

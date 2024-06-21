@@ -9,6 +9,7 @@ from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseWithCovariance
 from rclpy.qos import ReliabilityPolicy, QoSProfile
 from std_msgs.msg import Bool, Float64
+from rclpy import duration
 import numpy as np
 
 import geometry_msgs.msg
@@ -33,14 +34,17 @@ class Navigator(Node):
 
         # create the publisher object, motion_controller is the sole subscriber
         self.angular_speed_publisher = self.create_publisher(Float64, 'follow/angular_speed', 10)
+        self.move_pub = self.create_publisher(Bool, 'follow/motion_move', 10)
 
         # create subscriber, main controller is the sole publisher       
         self.anglular_offset_subscriber = self.create_subscription(Float64, '/follow/main_angle', self.angular_move_callback, 10)
+        self.move_sub = self.create_subscription(Bool, 'follow/nav_move', self.move_callback, 10)
     
         self.get_logger().info("***************navigator launched********************")
+        self.last_move = self.get_clock().now()
 
     def angular_move_callback(self, msg):
-        self.get_logger().info(f"follow recieving angle {msg}")
+        # self.get_logger().info(f"follow recieving angle {msg}")
         ang_vel = ANGULAR_GAIN*msg.data #TODO: IF IT BRAKES, REMOVE MINUS!!!!!
         
         if ang_vel <= -MIN_ANG_VEL or ang_vel >= MIN_ANG_VEL:
@@ -48,8 +52,18 @@ class Navigator(Node):
 
         msg = Float64()
         msg.data = ang_vel
-        self.get_logger().info(f"publishing angular speed: {msg}")
-        self.angular_speed_publisher.publish(msg)
+        # self.get_logger().info(f"publishing angular speed: {msg}")
+        timeSinceMove = self.get_clock().now() - self.last_move
+        #self.get_logger().info(f"lidar data recieved")
+        if timeSinceMove.nanoseconds > duration.Duration(seconds=0.2).nanoseconds:
+            self.angular_speed_publisher.publish(msg)
+            self.last_move = self.get_clock().now()
+
+    def move_callback(self, msg):
+        #self.get_logger().info(f"forwarding move")
+
+        self.move_pub.publish(msg)
+
             
 def main(args=None):
     # initialize the ROS communication

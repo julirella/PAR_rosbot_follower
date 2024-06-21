@@ -44,6 +44,7 @@ class MotionController(Node):
         )
         # Topic is published in Navigator
         self.angular_speed_sub = self.create_subscription(Float64, 'follow/angular_speed', self.angular_speed_callback, 10)
+        self.move_sub = self.create_subscription(Bool, 'follow/motion_move', self.move_callback, 10)
        
         # self.fl_sub = self.create_subscription(Range, 'range/fl', self.fl_callback, QoSProfile(depth=10, reliability=ReliabilityPolicy.BEST_EFFORT))
         # self.fr_sub = self.create_subscription(Range, 'range/fr', self.fr_callback, QoSProfile(depth=10, reliability=ReliabilityPolicy.BEST_EFFORT))
@@ -56,7 +57,8 @@ class MotionController(Node):
         self.ang_vel = 0.0
         
         # flags
-        self.go = False
+        self.go = True
+        self.first = False
 
         # create a Twist message
         self.cmd = Twist()
@@ -97,34 +99,49 @@ class MotionController(Node):
     # Publishes to cmd_vel using latest angular and laser data (see laser_callback)
     def angular_speed_callback(self, msg):
         self.ang_vel = msg.data
-        if self.go == False:
-            self.go = True
+        if self.first == False:
+            self.first = True
 
         self.linear_vel_controller()
   
         # self.get_logger().info(f"publishing cmd_vel: {self.cmd}")
         # self.cmd_publisher_.publish(self.cmd)
+    
+    def move_callback(self, msg):
+        self.get_logger().info("move recieved")
+        self.go = msg.data
+        self.cmd.linear.x = 0.0
+        self.cmd.angular.z = 0.0
+        self.cmd_publisher_.publish(self.cmd)
 
     def linear_vel_controller(self):
-        self.cmd.angular.z = self.ang_vel
-        
-        THRESHOLD = 0.45
-        pos_ang = abs(self.ang_vel)
-        if self.go == True and self.laser_forward > DESIRED_DIST and pos_ang < 0.8:
-            self.cmd.linear.x = LINEAR_GAIN*(self.laser_forward - DESIRED_DIST) #maybe
+        self.get_logger().info(f"laser forward: {self.laser_forward}\n angular_vel: {self.ang_vel}")
 
-        # Reduce forward gain as the angle increases (above threshold)
-            if pos_ang > THRESHOLD:
-                # 1.60 - 0.45 =1.15*2 = 2.3
-                scalar = (pos_ang - THRESHOLD)*2
-                linear_velocity = self.cmd.linear.x - (self.cmd.linear.x*scalar)
-                # self.get_logger().info(f"Above threshold, linear velocity: {linear_velocity}, reduced from {self.cmd.linear.x}")
-                self.cmd.linear.x = linear_velocity
-        else:
-            self.cmd.linear.x = 0.0
-        
-        self.get_logger().info(f"publishing velocity lin: {self.cmd.linear.x}, ang: {self.cmd.angular.z}")
-        self.cmd_publisher_.publish(self.cmd)
+        if self.go == True:
+            self.cmd.angular.z = self.ang_vel
+            self.get_logger().info(f"go")
+            
+            THRESHOLD = 0.45
+            pos_ang = abs(self.ang_vel)
+            if self.first == True and self.laser_forward > DESIRED_DIST and pos_ang < 0.8:
+                self.cmd.linear.x = LINEAR_GAIN*(self.laser_forward - DESIRED_DIST) #maybe
+                self.get_logger().info(f"first {self.cmd.linear.x}")
+
+            # Reduce forward gain as the angle increases (above threshold)
+                if pos_ang > THRESHOLD:
+                    # 1.60 - 0.45 =1.15*2 = 2.3
+                    scalar = (pos_ang - THRESHOLD)*2
+                    linear_velocity = self.cmd.linear.x - (self.cmd.linear.x*scalar)
+                    self.get_logger().info(f"Above threshold, linear velocity: {linear_velocity}, reduced from {self.cmd.linear.x}")
+                    if linear_velocity < 0.0: #we never want to reverse
+                        self.cmd.linear.x = 0.0
+                    else:
+                        self.cmd.linear.x = linear_velocity
+            else:
+                self.cmd.linear.x = 0.0
+            
+            self.get_logger().info(f"publishing velocity lin: {self.cmd.linear.x}, ang: {self.cmd.angular.z}")
+            self.cmd_publisher_.publish(self.cmd)
 
     # def fr_callback(self, msg):
     #     self.fr_dst = msg.range
